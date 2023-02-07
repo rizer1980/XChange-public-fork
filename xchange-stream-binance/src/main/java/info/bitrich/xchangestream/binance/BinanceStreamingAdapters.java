@@ -9,7 +9,6 @@ import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.instrument.Instrument;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -42,17 +41,20 @@ public class BinanceStreamingAdapters {
     public static OrderBook adaptFuturesOrderbook(DepthBinanceWebSocketTransaction binanceOrderBook) {
         List<LimitOrder> bids = new ArrayList<>();
         List<LimitOrder> asks = new ArrayList<>();
+        Date transactionTime = new Date(binanceOrderBook.getOrderBook().transactionTime);
         Instrument instrument = BinanceAdapters.adaptSymbol(binanceOrderBook.getSymbol(), true);
 
         binanceOrderBook.getOrderBook().asks.forEach((key, value) -> asks.add(new LimitOrder.Builder(Order.OrderType.ASK, instrument)
                 .limitPrice(key)
                 .originalAmount(value)
+                .timestamp(transactionTime)
                 .build()));
         binanceOrderBook.getOrderBook().bids.forEach((key, value) -> bids.add(new LimitOrder.Builder(Order.OrderType.BID, instrument)
                 .limitPrice(key)
                 .originalAmount(value)
+                .timestamp(transactionTime)
                 .build()));
 
-        return new OrderBook(Date.from(Instant.now()),asks,bids);
+        return new OrderBook(transactionTime,asks,bids);
     }
 }

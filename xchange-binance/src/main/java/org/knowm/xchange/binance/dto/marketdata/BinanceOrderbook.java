@@ -1,25 +1,25 @@
 package org.knowm.xchange.binance.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.function.BiConsumer;
 
 public final class BinanceOrderbook {
 
   public final long lastUpdateId;
+  public final long transactionTime;
   public final SortedMap<BigDecimal, BigDecimal> bids;
   public final SortedMap<BigDecimal, BigDecimal> asks;
 
   public BinanceOrderbook(
-      @JsonProperty("lastUpdateId") long lastUpdateId,
-      @JsonProperty("bids") List<Object[]> bidsJson,
-      @JsonProperty("asks") List<Object[]> asksJson) {
+          @JsonProperty("lastUpdateId") long lastUpdateId,
+          @JsonProperty("bids") List<Object[]> bidsJson,
+          @JsonProperty("asks") List<Object[]> asksJson,
+          @JsonProperty("transactionTime") long transactionTime) {
     this.lastUpdateId = lastUpdateId;
+    this.transactionTime = transactionTime;
     BiConsumer<Object[], Map<BigDecimal, BigDecimal>> entryProcessor =
         (obj, col) -> {
           BigDecimal price = new BigDecimal(obj[0].toString());

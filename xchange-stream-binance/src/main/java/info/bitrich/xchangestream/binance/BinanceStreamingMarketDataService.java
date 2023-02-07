@@ -15,11 +15,7 @@ import io.reactivex.functions.Consumer;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceErrorAdapter;
 import org.knowm.xchange.binance.dto.BinanceException;
-import org.knowm.xchange.binance.dto.marketdata.BinanceBookTicker;
-import org.knowm.xchange.binance.dto.marketdata.BinanceKline;
-import org.knowm.xchange.binance.dto.marketdata.BinanceOrderbook;
-import org.knowm.xchange.binance.dto.marketdata.BinanceTicker24h;
-import org.knowm.xchange.binance.dto.marketdata.KlineInterval;
+import org.knowm.xchange.binance.dto.marketdata.*;
 import org.knowm.xchange.binance.service.BinanceMarketDataService;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -32,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -592,7 +589,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                         entry.getValue(),
                         instrument,
                         entry.getKey(),
-                        depthTransaction.getEventTime(),
+                        instrument instanceof FuturesContract ? new Date(depthTransaction.getTransactionTime()) : depthTransaction.getEventTime(),
                         entry.getValue()));
 
     Stream<OrderBookUpdate> askStream =
@@ -604,7 +601,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                         entry.getValue(),
                         instrument,
                         entry.getKey(),
-                        depthTransaction.getEventTime(),
+                            instrument instanceof FuturesContract ? new Date(depthTransaction.getTransactionTime()) : depthTransaction.getEventTime(),
                         entry.getValue()));
 
     return Stream.concat(bidStream, askStream);
