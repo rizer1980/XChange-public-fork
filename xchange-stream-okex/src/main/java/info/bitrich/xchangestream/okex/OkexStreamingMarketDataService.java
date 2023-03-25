@@ -143,6 +143,10 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
                         orderBook.update(
                             OkexAdapters.adaptLimitOrder(
                                 okexPublicOrder, instrument, Order.OrderType.BID)));
+                if(asks.size() == 0 && bids.size()==0) {
+                  LOG.info("asks and bids are empty pair {}",instrument);
+                  return Observable.empty();
+                }
                 if (orderBookUpdatesSubscriptions.get(instrument) != null) {
                   orderBookUpdatesSubscriptions(
                       instrument,
