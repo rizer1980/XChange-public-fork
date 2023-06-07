@@ -104,19 +104,21 @@ public class OkexAdapters {
         .build();
   }
 
-  public static OkexOrderRequest adaptOrder(MarketOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+  public static OkexOrderRequest adaptOrder(
+      MarketOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+    String posSide = "null";
+    if (order.hasFlag(OkexFuturePosSideFlag.LONG)) posSide = "long";
+    else if (order.hasFlag(OkexFuturePosSideFlag.SHORT)) posSide = "short";
     return OkexOrderRequest.builder()
-            .instrumentId(adaptInstrument(order.getInstrument()))
-            .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
-            .side(order.getType() == Order.OrderType.BID ? "buy" : "sell")
-            .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
-            // support Futures/Swap capabilities of Okex, till then it should be null to
-            // perform "net" orders
-            .reducePosition(order.hasFlag(OkexOrderFlags.REDUCE_ONLY))
-            .clientOrderId(order.getUserReference())
-            .orderType(OkexOrderType.market.name())
-            .amount(convertVolumeToContractSize(order, exchangeMetaData))
-            .build();
+        .instrumentId(adaptInstrument(order.getInstrument()))
+        .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
+        .side(order.getType() == Order.OrderType.BID ? "buy" : "sell")
+        .posSide(posSide)
+        .reducePosition(order.hasFlag(OkexOrderFlags.REDUCE_ONLY))
+        .clientOrderId(order.getUserReference())
+        .orderType(OkexOrderType.market.name())
+        .amount(convertVolumeToContractSize(order, exchangeMetaData))
+        .build();
   }
 
   /**
@@ -149,14 +151,16 @@ public class OkexAdapters {
     }
   }
 
-  public static OkexOrderRequest adaptOrder(LimitOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+  public static OkexOrderRequest adaptOrder(
+      LimitOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+    String posSide = "null";
+    if (order.hasFlag(OkexFuturePosSideFlag.LONG)) posSide = "long";
+    else if (order.hasFlag(OkexFuturePosSideFlag.SHORT)) posSide = "short";
     return OkexOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
         .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
         .side(order.getType() == Order.OrderType.BID ? "buy" : "sell")
-        .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
-        // support Futures/Swap capabilities of Okex, till then it should be null to
-        // perform "net" orders
+        .posSide(posSide)
         .clientOrderId(order.getUserReference())
         .reducePosition(order.hasFlag(OkexOrderFlags.REDUCE_ONLY))
         .orderType((order.hasFlag(OkexOrderFlags.POST_ONLY))

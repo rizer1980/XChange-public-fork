@@ -18,6 +18,7 @@ import org.knowm.xchange.exceptions.FundsExceededException;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.OkexAdapters;
 import org.knowm.xchange.okex.OkexExchange;
+import org.knowm.xchange.okex.dto.trade.OkexClosePositionRequest;
 import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexResponse;
@@ -226,5 +227,13 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
         .stream()
         .map(result -> "0".equals(result.getCode()))
         .collect(Collectors.toList());
+  }
+
+  public boolean closePosition(Instrument pair) throws IOException {
+    String instrumentId =
+            OkexAdapters.adaptInstrument(pair);
+    OkexClosePositionRequest req =
+            OkexClosePositionRequest.builder().instrumentId(instrumentId).build();
+    return "0".equals(closePosition(req).getData().get(0).getCode());
   }
 }
