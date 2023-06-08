@@ -229,11 +229,11 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
         .collect(Collectors.toList());
   }
 
-  public boolean closePosition(Instrument pair, String posSide, String mgnMode) throws IOException {
+  public boolean closePosition(Instrument pair, String posSide, String mgnMode, String clOrdId) throws IOException {
     String instrumentId =
             OkexAdapters.adaptInstrument(pair);
-    OkexClosePositionRequest req =
-            OkexClosePositionRequest.builder().instrumentId(instrumentId).posSide(posSide).mgnMode(mgnMode).build();
+    OkexClosePositionRequest req = OkexClosePositionRequest.builder().instrumentId(instrumentId).posSide(posSide)
+            .mgnMode(mgnMode).clOrdId(clOrdId).build();
     return "0".equals(closePosition(req).getData().get(0).getCode());
   }
 }
