@@ -53,9 +53,9 @@ public class OkexStreamingPlaceOrder {
     }
 
     @Test
-    public void checkUserTradesStream() throws IOException {
-        OkexExchange okexExchange = (OkexExchange) exchange;
-        OkexStreamingTradeService okexStreamingTradeService = (OkexStreamingTradeService) exchange.getStreamingTradeService();
+    public void checkPlaceOrderSocket() throws IOException {
+        OkexStreamingExchange okexStreamingExchange = (OkexStreamingExchange) exchange;
+        OkexStreamingTradeService okexStreamingTradeService = (OkexStreamingTradeService) okexStreamingExchange.getStreamingTradeService();
     LimitOrder lo =
         new LimitOrder.Builder(Order.OrderType.BID, instrument)
             .limitPrice(new BigDecimal("145"))

@@ -33,10 +33,12 @@ public class OkexStreamingTradeService implements StreamingTradeService {
     private final OkexStreamingService service;
     private final ExchangeMetaData exchangeMetaData;
     private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
+    private String accountLevel;
 
-    public OkexStreamingTradeService(OkexStreamingService service, ExchangeMetaData exchangeMetaData) {
+    public OkexStreamingTradeService(OkexStreamingService service, ExchangeMetaData exchangeMetaData, String accountLevel) {
         this.service = service;
         this.exchangeMetaData = exchangeMetaData;
+        this.accountLevel = accountLevel;
     }
 
     @Override
@@ -61,7 +63,7 @@ public class OkexStreamingTradeService implements StreamingTradeService {
                 : OkexOrderType.limit.name();
         args.add(new OrderRequest.OrderArg(limitOrder.getType() == Order.OrderType.BID ? "buy" : "sell",
                 OkexAdapters.adaptInstrument(limitOrder.getInstrument()),
-                        adaptTradeMode(limitOrder.getInstrument(),service.accountLevel),
+                        adaptTradeMode(limitOrder.getInstrument(),accountLevel),
                         orderType, amount));
         OrderRequest message = new OrderRequest("testId","order",args);
         String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(message);

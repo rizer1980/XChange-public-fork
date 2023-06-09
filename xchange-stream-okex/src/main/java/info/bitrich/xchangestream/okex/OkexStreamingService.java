@@ -47,8 +47,6 @@ public class OkexStreamingService extends JsonNettyStreamingService {
 
     private Disposable pingPongSubscription;
 
-    public String accountLevel = "1";
-
     private final ExchangeSpecification xSpec;
 
     public OkexStreamingService(String apiUrl, ExchangeSpecification exchangeSpecification) {
