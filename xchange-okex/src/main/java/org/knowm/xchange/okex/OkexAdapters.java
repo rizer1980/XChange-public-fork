@@ -129,7 +129,7 @@ public class OkexAdapters {
    * USDT-margined contracts:contract_size,volume,USDT(coin to contract_size:contract_size = volume/ctVal;USDT to contract_size:contract_size = volume/ctVal/price)
    * */
 
-  private static String convertVolumeToContractSize(Order order, ExchangeMetaData exchangeMetaData){
+  public static String convertVolumeToContractSize(Order order, ExchangeMetaData exchangeMetaData){
     return (order.getInstrument() instanceof FuturesContract)
             ? order.getOriginalAmount().divide(exchangeMetaData.getInstruments().get(order.getInstrument()).getContractValue(), 0, RoundingMode.HALF_DOWN).toPlainString()
             : order.getOriginalAmount().toString();
@@ -141,7 +141,7 @@ public class OkexAdapters {
             : new BigDecimal(okexSize).stripTrailingZeros();
   }
 
-  private static String adaptTradeMode(Instrument instrument, String accountLevel){
+  public static String adaptTradeMode(Instrument instrument, String accountLevel){
     if(accountLevel.equals("3") || accountLevel.equals("4")){
       return "cross";
     } else {
