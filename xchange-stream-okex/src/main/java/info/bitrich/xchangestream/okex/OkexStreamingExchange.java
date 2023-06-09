@@ -26,6 +26,7 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
     private OkexStreamingMarketDataService streamingMarketDataService;
 
     private OkexStreamingTradeService streamingTradeService;
+
     public OkexStreamingExchange() {}
 
 
