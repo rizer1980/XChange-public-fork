@@ -1,13 +1,17 @@
 package info.bitrich.xchangestream.okex;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import static info.bitrich.xchangestream.okex.OkexStreamingService.USERTRADES;
+import static org.knowm.xchange.okex.OkexAdapters.adaptTradeMode;
+import static org.knowm.xchange.okex.OkexAdapters.convertVolumeToContractSize;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.core.StreamingTradeService;
-import info.bitrich.xchangestream.okex.dto.OkexLoginMessage;
 import info.bitrich.xchangestream.okex.dto.trade.OrderRequest;
-import info.bitrich.xchangestream.okex.dto.trade.OrderResponse;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.Observable;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
@@ -18,15 +22,6 @@ import org.knowm.xchange.okex.OkexAdapters;
 import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
 import org.knowm.xchange.okex.dto.trade.OkexOrderFlags;
 import org.knowm.xchange.okex.dto.trade.OkexOrderType;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.LinkedList;
-import java.util.List;
-
-import static info.bitrich.xchangestream.okex.OkexStreamingService.USERTRADES;
-import static org.knowm.xchange.okex.OkexAdapters.adaptTradeMode;
-import static org.knowm.xchange.okex.OkexAdapters.convertVolumeToContractSize;
 
 public class OkexStreamingTradeService implements StreamingTradeService {
 
@@ -61,12 +56,15 @@ public class OkexStreamingTradeService implements StreamingTradeService {
                 : (limitOrder.hasFlag(OkexOrderFlags.OPTIMAL_LIMIT_IOC) && limitOrder.getInstrument() instanceof FuturesContract)
                 ? OkexOrderType.optimal_limit_ioc.name()
                 : OkexOrderType.limit.name();
-        args.add(new OrderRequest.OrderArg(limitOrder.getType() == Order.OrderType.BID ? "buy" : "sell",
+        OrderRequest.OrderArg arg = new OrderRequest.OrderArg(limitOrder.getType() == Order.OrderType.BID ? "buy" : "sell",
                 OkexAdapters.adaptInstrument(limitOrder.getInstrument()),
-                        adaptTradeMode(limitOrder.getInstrument(),accountLevel),
-                        orderType, amount));
-        OrderRequest message = new OrderRequest("testId","order",args);
+                adaptTradeMode(limitOrder.getInstrument(),accountLevel),
+                orderType, amount);
+        arg.setPx(limitOrder.getLimitPrice().toString());
+        args.add(arg);
+        OrderRequest message = new OrderRequest(limitOrder.getUserReference(),"order",args);
         String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(message);
+
         service.sendMessage(payload);
         //
     }

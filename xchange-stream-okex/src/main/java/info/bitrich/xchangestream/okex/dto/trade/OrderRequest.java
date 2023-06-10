@@ -1,27 +1,35 @@
 package info.bitrich.xchangestream.okex.dto.trade;
 
 import info.bitrich.xchangestream.okex.dto.OkexLoginMessage;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.LinkedList;
 import java.util.List;
 
-@Getter @Setter @AllArgsConstructor
+@Getter
+@AllArgsConstructor
 public class OrderRequest {
-    private String id;
-    private String op;
+    String id;
+    String op;
 
     List<OrderArg> args;
 
-    @Getter @Setter @AllArgsConstructor
+    @Getter
+    @Setter
     public static class OrderArg {
-        private String side;
-        private String instId;
-        private String tdMode;
-        private String ordType;
-        private String sz;
+        String side;
+        String instId;
+        String tdMode;
+        String ordType;
+        String sz;
+        String px;
+
+        public OrderArg(String side, String instId, String tdMode, String ordType, String sz) {
+            this.side = side;
+            this.instId = instId;
+            this.tdMode = tdMode;
+            this.ordType = ordType;
+            this.sz = sz;
+        }
     }
 }
