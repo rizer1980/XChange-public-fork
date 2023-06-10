@@ -23,6 +23,7 @@ public class OrderRequest {
         String ordType;
         String sz;
         String px;
+        String posSide;
 
         public OrderArg(String side, String instId, String tdMode, String ordType, String sz) {
             this.side = side;
