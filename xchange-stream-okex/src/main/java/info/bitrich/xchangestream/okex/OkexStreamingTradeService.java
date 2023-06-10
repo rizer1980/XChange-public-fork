@@ -51,6 +51,9 @@ public class OkexStreamingTradeService implements StreamingTradeService {
     public void placeLimitOrder(LimitOrder limitOrder) throws IOException {
         List<OrderRequest.OrderArg> args = new LinkedList<>();
         String amount = convertVolumeToContractSize(limitOrder, exchangeMetaData);
+        String posSide = "";
+        if (limitOrder.hasFlag(OkexFuturePosSideFlag.LONG)) posSide = "long";
+        else if (limitOrder.hasFlag(OkexFuturePosSideFlag.SHORT)) posSide = "short";
         String orderType = (limitOrder.hasFlag(OkexOrderFlags.POST_ONLY))
                 ? OkexOrderType.post_only.name()
                 : (limitOrder.hasFlag(OkexOrderFlags.OPTIMAL_LIMIT_IOC) && limitOrder.getInstrument() instanceof FuturesContract)
@@ -61,6 +64,8 @@ public class OkexStreamingTradeService implements StreamingTradeService {
                 adaptTradeMode(limitOrder.getInstrument(),accountLevel),
                 orderType, amount);
         arg.setPx(limitOrder.getLimitPrice().toString());
+        if(posSide.length()>0)
+            arg.setPosSide(posSide);
         args.add(arg);
         OrderRequest message = new OrderRequest(limitOrder.getUserReference(),"order",args);
         String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(message);
