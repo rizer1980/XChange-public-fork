@@ -59,7 +59,7 @@ public interface Okex {
 
   @GET
   @Path("/market/books")
-  OkexResponse<OkexOrderbook> getOrderbook(
+  OkexResponse<List<OkexOrderbook>> getOrderbook(
       @QueryParam("instId") String instrument,
       @QueryParam("sz") int depth,
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
