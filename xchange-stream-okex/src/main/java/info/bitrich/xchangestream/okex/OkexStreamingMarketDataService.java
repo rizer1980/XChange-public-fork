@@ -105,9 +105,11 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
               String action =
                   channelName.equals(ORDERBOOK5) ? "snapshot" : jsonNode.get("action").asText();
               if ("snapshot".equalsIgnoreCase(action)) {
-                OkexOrderbook okexOrderbooks =
-                    mapper.treeToValue(
-                        jsonNode.get("data").get(0), OkexOrderbook.class);
+                List<OkexOrderbook> okexOrderbooks =
+                        mapper.treeToValue(
+                                jsonNode.get("data"),
+                                mapper.getTypeFactory()
+                                        .constructCollectionType(List.class, OkexOrderbook.class));
                 OrderBook orderBook = OkexAdapters.adaptOrderBook(okexOrderbooks, instrument);
                 orderBookMap.put(instId, orderBook);
                 return Observable.just(orderBook);
