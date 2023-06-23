@@ -178,17 +178,17 @@ public class OkexAdapters {
     return adaptOrderbookOrder(okexPublicOrder.getVolume(), okexPublicOrder.getPrice(), instrument, orderType, timeStamp);
   }
 
-  public static OrderBook adaptOrderBook(OkexOrderbook okexOrderbooks, Instrument instrument) {
+  public static OrderBook adaptOrderBook(List<OkexOrderbook> okexOrderbooks, Instrument instrument) {
     List<LimitOrder> asks = new ArrayList<>();
     List<LimitOrder> bids = new ArrayList<>();
-    Date timeStamp = new Date(Long.parseLong(okexOrderbooks.getTs()));
-    okexOrderbooks
+    Date timeStamp = new Date(Long.parseLong(okexOrderbooks.get(0).getTs()));
+    okexOrderbooks.get(0)
         .getAsks()
         .forEach(
             okexAsk ->
                 asks.add(adaptLimitOrder(okexAsk, instrument, OrderType.ASK, timeStamp)));
 
-    okexOrderbooks
+    okexOrderbooks.get(0)
         .getBids()
         .forEach(
             okexBid ->
@@ -198,7 +198,7 @@ public class OkexAdapters {
   }
 
   public static OrderBook adaptOrderBook(
-      OkexResponse<OkexOrderbook> okexOrderbook, Instrument instrument) {
+      OkexResponse<List<OkexOrderbook>> okexOrderbook, Instrument instrument) {
     return adaptOrderBook(okexOrderbook.getData(), instrument);
   }
 
