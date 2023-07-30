@@ -19,11 +19,7 @@ import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.account.*;
 import org.knowm.xchange.okex.dto.marketdata.OkexCurrency;
 import org.knowm.xchange.okex.dto.subaccount.OkexSubAccountDetails;
-import org.knowm.xchange.okex.dto.trade.OkexAmendOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexCancelOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
-import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
+import org.knowm.xchange.okex.dto.trade.*;
 import si.mazi.rescu.ParamsDigest;
 
 @Path("/api/v5")
@@ -53,6 +49,7 @@ public interface OkexAuthenticated extends Okex {
   String subAccountList = "/users/subaccount/list"; // Stated as 2 req/2 sec
   String subAccountBalance = "/account/subaccount/balances"; // Stated as 2 req/2 sec
   String piggyBalance = "/asset/piggy-balance"; // Stated as 6 req/1 sec
+  String closePositionPath = "/trade/close-position"; // Stated as 20 req/2 sec
 
   // To avoid 429s, actual req/second may need to be lowered!
   Map<String, List<Integer>> privatePathRateLimits =
@@ -80,6 +77,7 @@ public interface OkexAuthenticated extends Okex {
           put(subAccountList, Arrays.asList(2, 2));
           put(subAccountBalance, Arrays.asList(2, 2));
           put(piggyBalance, Arrays.asList(6, 1));
+          put(closePositionPath, Arrays.asList(60, 2));
         }
       };
 
@@ -381,4 +379,16 @@ public interface OkexAuthenticated extends Okex {
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
       List<OkexAmendOrderRequest> requestPayload)
       throws OkexException, IOException;
+
+  @POST
+  @Path(closePositionPath)
+  @Consumes(MediaType.APPLICATION_JSON)
+  OkexResponse<List<OkexOrderResponse>> closePosition(
+          @HeaderParam("OK-ACCESS-KEY") String apiKey,
+          @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
+          @HeaderParam("OK-ACCESS-TIMESTAMP") String timestamp,
+          @HeaderParam("OK-ACCESS-PASSPHRASE") String passphrase,
+          @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading,
+          OkexClosePositionRequest requestPayload)
+          throws OkexException, IOException;
 }
