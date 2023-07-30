@@ -19,6 +19,7 @@ import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.OkexAdapters;
+import org.knowm.xchange.okex.dto.trade.OkexFuturePosSideFlag;
 import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
 import org.knowm.xchange.okex.dto.trade.OkexOrderFlags;
 import org.knowm.xchange.okex.dto.trade.OkexOrderType;
