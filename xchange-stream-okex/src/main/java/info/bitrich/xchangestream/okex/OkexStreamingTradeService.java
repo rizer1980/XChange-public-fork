@@ -1,28 +1,40 @@
 package info.bitrich.xchangestream.okex;
 
+import static info.bitrich.xchangestream.okex.OkexStreamingService.USERTRADES;
+import static org.knowm.xchange.okex.OkexAdapters.adaptTradeMode;
+import static org.knowm.xchange.okex.OkexAdapters.convertVolumeToContractSize;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.core.StreamingTradeService;
+import info.bitrich.xchangestream.okex.dto.trade.OrderRequest;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.Observable;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.OkexAdapters;
+import org.knowm.xchange.okex.dto.trade.OkexFuturePosSideFlag;
 import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
-
-import java.util.List;
-
-import static info.bitrich.xchangestream.okex.OkexStreamingService.USERTRADES;
+import org.knowm.xchange.okex.dto.trade.OkexOrderFlags;
+import org.knowm.xchange.okex.dto.trade.OkexOrderType;
 
 public class OkexStreamingTradeService implements StreamingTradeService {
 
     private final OkexStreamingService service;
     private final ExchangeMetaData exchangeMetaData;
     private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
+    private String accountLevel;
 
-    public OkexStreamingTradeService(OkexStreamingService service, ExchangeMetaData exchangeMetaData) {
+    public OkexStreamingTradeService(OkexStreamingService service, ExchangeMetaData exchangeMetaData, String accountLevel) {
         this.service = service;
         this.exchangeMetaData = exchangeMetaData;
+        this.accountLevel = accountLevel;
     }
 
     @Override
@@ -36,5 +48,30 @@ public class OkexStreamingTradeService implements StreamingTradeService {
                     return Observable.fromIterable(OkexAdapters.adaptUserTrades(okexOrderDetails, exchangeMetaData).getUserTrades());
                 }
         );
+    }
+    public void placeLimitOrder(LimitOrder limitOrder) throws IOException {
+        List<OrderRequest.OrderArg> args = new LinkedList<>();
+        String amount = convertVolumeToContractSize(limitOrder, exchangeMetaData);
+        String posSide = "";
+        if (limitOrder.hasFlag(OkexFuturePosSideFlag.LONG)) posSide = "long";
+        else if (limitOrder.hasFlag(OkexFuturePosSideFlag.SHORT)) posSide = "short";
+        String orderType = (limitOrder.hasFlag(OkexOrderFlags.POST_ONLY))
+                ? OkexOrderType.post_only.name()
+                : (limitOrder.hasFlag(OkexOrderFlags.OPTIMAL_LIMIT_IOC) && limitOrder.getInstrument() instanceof FuturesContract)
+                ? OkexOrderType.optimal_limit_ioc.name()
+                : OkexOrderType.limit.name();
+        OrderRequest.OrderArg arg = new OrderRequest.OrderArg(limitOrder.getType() == Order.OrderType.BID ? "buy" : "sell",
+                OkexAdapters.adaptInstrument(limitOrder.getInstrument()),
+                adaptTradeMode(limitOrder.getInstrument(),accountLevel),
+                orderType, amount);
+        arg.setPx(limitOrder.getLimitPrice().toString());
+        if(posSide.length()>0)
+            arg.setPosSide(posSide);
+        args.add(arg);
+        OrderRequest message = new OrderRequest(limitOrder.getUserReference(),"order",args);
+        String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(message);
+
+        service.sendMessage(payload);
+        //
     }
 }

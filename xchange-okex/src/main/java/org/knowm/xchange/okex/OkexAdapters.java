@@ -104,19 +104,21 @@ public class OkexAdapters {
         .build();
   }
 
-  public static OkexOrderRequest adaptOrder(MarketOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+  public static OkexOrderRequest adaptOrder(
+      MarketOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+    String posSide = "null";
+    if (order.hasFlag(OkexFuturePosSideFlag.LONG)) posSide = "long";
+    else if (order.hasFlag(OkexFuturePosSideFlag.SHORT)) posSide = "short";
     return OkexOrderRequest.builder()
-            .instrumentId(adaptInstrument(order.getInstrument()))
-            .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
-            .side(order.getType() == Order.OrderType.BID ? "buy" : "sell")
-            .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
-            // support Futures/Swap capabilities of Okex, till then it should be null to
-            // perform "net" orders
-            .reducePosition(order.hasFlag(OkexOrderFlags.REDUCE_ONLY))
-            .clientOrderId(order.getUserReference())
-            .orderType(OkexOrderType.market.name())
-            .amount(convertVolumeToContractSize(order, exchangeMetaData))
-            .build();
+        .instrumentId(adaptInstrument(order.getInstrument()))
+        .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
+        .side(order.getType() == Order.OrderType.BID ? "buy" : "sell")
+        .posSide(posSide)
+        .reducePosition(order.hasFlag(OkexOrderFlags.REDUCE_ONLY))
+        .clientOrderId(order.getUserReference())
+        .orderType(OkexOrderType.market.name())
+        .amount(convertVolumeToContractSize(order, exchangeMetaData))
+        .build();
   }
 
   /**
@@ -129,7 +131,7 @@ public class OkexAdapters {
    * USDT-margined contracts:contract_size,volume,USDT(coin to contract_size:contract_size = volume/ctVal;USDT to contract_size:contract_size = volume/ctVal/price)
    * */
 
-  private static String convertVolumeToContractSize(Order order, ExchangeMetaData exchangeMetaData){
+  public static String convertVolumeToContractSize(Order order, ExchangeMetaData exchangeMetaData){
     return (order.getInstrument() instanceof FuturesContract)
             ? order.getOriginalAmount().divide(exchangeMetaData.getInstruments().get(order.getInstrument()).getContractValue(), 0, RoundingMode.HALF_DOWN).toPlainString()
             : order.getOriginalAmount().toString();
@@ -141,7 +143,7 @@ public class OkexAdapters {
             : new BigDecimal(okexSize).stripTrailingZeros();
   }
 
-  private static String adaptTradeMode(Instrument instrument, String accountLevel){
+  public static String adaptTradeMode(Instrument instrument, String accountLevel){
     if(accountLevel.equals("3") || accountLevel.equals("4")){
       return "cross";
     } else {
@@ -149,14 +151,16 @@ public class OkexAdapters {
     }
   }
 
-  public static OkexOrderRequest adaptOrder(LimitOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+  public static OkexOrderRequest adaptOrder(
+      LimitOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+    String posSide = "null";
+    if (order.hasFlag(OkexFuturePosSideFlag.LONG)) posSide = "long";
+    else if (order.hasFlag(OkexFuturePosSideFlag.SHORT)) posSide = "short";
     return OkexOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
         .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
         .side(order.getType() == Order.OrderType.BID ? "buy" : "sell")
-        .posSide(null) // PosSide should come as a input from an extended LimitOrder class to
-        // support Futures/Swap capabilities of Okex, till then it should be null to
-        // perform "net" orders
+        .posSide(posSide)
         .clientOrderId(order.getUserReference())
         .reducePosition(order.hasFlag(OkexOrderFlags.REDUCE_ONLY))
         .orderType((order.hasFlag(OkexOrderFlags.POST_ONLY))
@@ -169,29 +173,28 @@ public class OkexAdapters {
         .build();
   }
 
-  public static LimitOrder adaptLimitOrder(OkexPublicOrder okexPublicOrder, Instrument instrument, OrderType orderType) {
-    return adaptOrderbookOrder(okexPublicOrder.getVolume(), okexPublicOrder.getPrice(), instrument, orderType);
+  public static LimitOrder adaptLimitOrder(OkexPublicOrder okexPublicOrder, Instrument instrument, OrderType orderType,
+                                           Date timeStamp) {
+    return adaptOrderbookOrder(okexPublicOrder.getVolume(), okexPublicOrder.getPrice(), instrument, orderType, timeStamp);
   }
 
   public static OrderBook adaptOrderBook(List<OkexOrderbook> okexOrderbooks, Instrument instrument) {
     List<LimitOrder> asks = new ArrayList<>();
     List<LimitOrder> bids = new ArrayList<>();
-
-    okexOrderbooks
-        .get(0)
+    Date timeStamp = new Date(Long.parseLong(okexOrderbooks.get(0).getTs()));
+    okexOrderbooks.get(0)
         .getAsks()
         .forEach(
             okexAsk ->
-                asks.add(adaptLimitOrder(okexAsk, instrument, OrderType.ASK)));
+                asks.add(adaptLimitOrder(okexAsk, instrument, OrderType.ASK, timeStamp)));
 
-    okexOrderbooks
-        .get(0)
+    okexOrderbooks.get(0)
         .getBids()
         .forEach(
             okexBid ->
-                bids.add(adaptLimitOrder(okexBid, instrument, OrderType.BID)));
+                bids.add(adaptLimitOrder(okexBid, instrument, OrderType.BID, timeStamp)));
 
-    return new OrderBook(Date.from(Instant.now()), asks, bids);
+    return new OrderBook(timeStamp, asks, bids);
   }
 
   public static OrderBook adaptOrderBook(
@@ -200,9 +203,9 @@ public class OkexAdapters {
   }
 
   public static LimitOrder adaptOrderbookOrder(
-      BigDecimal amount, BigDecimal price, Instrument instrument, Order.OrderType orderType) {
+      BigDecimal amount, BigDecimal price, Instrument instrument, Order.OrderType orderType, Date timeStamp) {
 
-    return new LimitOrder(orderType, amount, instrument, "", null, price);
+    return new LimitOrder(orderType, amount, instrument, "", timeStamp, price);
   }
 
   public static Ticker adaptTicker(OkexTicker okexTicker) {

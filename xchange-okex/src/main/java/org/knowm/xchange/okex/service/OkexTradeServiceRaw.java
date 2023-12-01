@@ -9,11 +9,7 @@ import org.knowm.xchange.okex.OkexExchange;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.account.OkexPosition;
-import org.knowm.xchange.okex.dto.trade.OkexAmendOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexCancelOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
-import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
+import org.knowm.xchange.okex.dto.trade.*;
 import org.knowm.xchange.utils.DateUtils;
 
 import static org.knowm.xchange.okex.OkexExchange.PARAM_PASSPHRASE;
@@ -306,6 +302,32 @@ public class OkexTradeServiceRaw extends OkexBaseService {
                       orders))
           .withRateLimiter(rateLimiter(OkexAuthenticated.amendBatchOrderPath))
           .call();
+    } catch (OkexException e) {
+      throw handleError(e);
+    }
+  }
+
+  /** <a href="https://www.okx.com/docs-v5/en/#rest-api-trade-close-positions">...</a> */
+  public OkexResponse<List<OkexOrderResponse>> closePosition(OkexClosePositionRequest request)
+          throws IOException {
+    try {
+      return decorateApiCall(
+              () ->
+                      okexAuthenticated.closePosition(
+                              exchange.getExchangeSpecification().getApiKey(),
+                              signatureCreator,
+                              DateUtils.toUTCISODateString(new Date()),
+                              (String)
+                                      exchange
+                                              .getExchangeSpecification()
+                                              .getExchangeSpecificParametersItem(PARAM_PASSPHRASE),
+                              (String)
+                                      exchange
+                                              .getExchangeSpecification()
+                                              .getExchangeSpecificParametersItem(PARAM_SIMULATED),
+                              request))
+              .withRateLimiter(rateLimiter(OkexAuthenticated.closePositionPath))
+              .call();
     } catch (OkexException e) {
       throw handleError(e);
     }

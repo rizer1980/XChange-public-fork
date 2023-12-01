@@ -27,6 +27,7 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
     private OkexStreamingMarketDataService streamingMarketDataService;
 
     private OkexStreamingTradeService streamingTradeService;
+
     public OkexStreamingExchange() {}
 
 
@@ -34,7 +35,7 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
     public Completable connect(ProductSubscription... args) {
         this.streamingService = new OkexStreamingService(getApiUrl(), this.exchangeSpecification);
         this.streamingMarketDataService = new OkexStreamingMarketDataService(streamingService);
-        this.streamingTradeService = new OkexStreamingTradeService(streamingService, exchangeMetaData);
+        this.streamingTradeService = new OkexStreamingTradeService(streamingService, exchangeMetaData,accountLevel);
 
         return streamingService.connect();
     }
