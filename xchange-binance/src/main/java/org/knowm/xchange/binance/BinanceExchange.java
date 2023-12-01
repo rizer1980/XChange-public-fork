@@ -106,9 +106,12 @@ public class BinanceExchange extends BaseExchange implements Exchange {
           exchangeMetaData = BinanceAdapters.adaptExchangeMetaData(marketDataService.getExchangeInfo(), assetDetailMap);
         }
       } else {
-        exchangeMetaData = BinanceAdapters.adaptExchangeMetaData(marketDataService.getExchangeInfo(), assetDetailMap);
-        if(isFuturesEnabled()){
-          BinanceAdapters.adaptFutureExchangeMetaData(exchangeMetaData, marketDataService.getFutureExchangeInfo());
+        if (isFuturesEnabled()) {
+          BinanceAdapters.adaptFutureExchangeMetaData(exchangeMetaData,
+              marketDataService.getFutureExchangeInfo());
+        } else {
+          exchangeMetaData = BinanceAdapters.adaptExchangeMetaData(
+              marketDataService.getExchangeInfo(), assetDetailMap);
         }
       }
 
