@@ -25,8 +25,7 @@ public class CoinmateTransferHistoryEntry {
       @JsonProperty("amountCurrency") String amountCurrency,
       @JsonProperty("walletType") String walletType,
       @JsonProperty("destination") String destination,
-      @JsonProperty("destinationTag") String destinationTag
-  ) {
+      @JsonProperty("destinationTag") String destinationTag) {
 
     this.fee = fee;
     this.transferType = transferType;
@@ -44,6 +43,34 @@ public class CoinmateTransferHistoryEntry {
     return id;
   }
 
+  public BigDecimal getFee() {
+    return fee;
+  }
+
+  public String getTransferType() {
+    return transferType;
+  }
+
+  public long getTimestamp() {
+    return timestamp;
+  }
+
+  public String getTransferStatus() {
+    return transferStatus;
+  }
+
+  public BigDecimal getAmount() {
+    return amount;
+  }
+
+  public String getAmountCurrency() {
+    return amountCurrency;
+  }
+
+  public String getWalletType() {
+    return walletType;
+  }
+
   public String getDestination() {
     return destination;
   }
@@ -51,5 +78,4 @@ public class CoinmateTransferHistoryEntry {
   public String getDestinationTag() {
     return destinationTag;
   }
-
 }
