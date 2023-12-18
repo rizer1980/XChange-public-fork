@@ -1,6 +1,8 @@
 package org.knowm.xchange.okex.dto;
 
-public enum OkexInstType {
+import org.knowm.xchange.dto.Order.IOrderFlags;
+
+public enum OkexInstType implements IOrderFlags {
   SPOT,
   MARGIN,
   SWAP,
