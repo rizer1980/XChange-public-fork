@@ -40,4 +40,21 @@ public class BybitAdaptersTest {
     assertThat(BybitAdapters.convertToBybitSymbol(new OptionsContract("BTC/USDC/240110/45500/P")))
         .isEqualTo("BTC-10JAN24-45500-P");
   }
+
+  @Test
+  public void testConvertToInstrument() {
+    assertThat(BybitAdapters.convertBybitSymbolToInstrument("BTCUSDC", BybitCategory.SPOT))
+        .isEqualTo(new CurrencyPair("BTC/USDC"));
+
+    assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETHUSDT", BybitCategory.LINEAR))
+        .isEqualTo(new FuturesContract("ETH/USDT/PERP"));
+    assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETHPERP", BybitCategory.LINEAR))
+        .isEqualTo(new FuturesContract("ETH/USDC/PERP"));
+    assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETH-02FEB24", BybitCategory.LINEAR))
+        .isEqualTo(new FuturesContract("ETH/USDC/02FEB24"));
+
+    assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETHUSDH24", BybitCategory.INVERSE))
+        .isEqualTo(new FuturesContract("ETH/USD/H24"));
+
+  }
 }
