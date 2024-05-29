@@ -132,4 +132,17 @@ public interface BybitAuthenticated {
       @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
       BybitCancelOrderPayload payload)
       throws IOException,BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/order/create-order">API</a>
+   */
+  @POST
+  @Path("/order/create")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitResult<BybitOrderResponse> placeAdvancedOrder(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitPlaceOrderPayload payload)
+      throws IOException, BybitException;
 }
