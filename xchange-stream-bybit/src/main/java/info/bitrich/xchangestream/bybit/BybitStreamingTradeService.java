@@ -10,6 +10,7 @@ import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.OpenPosition;
+import org.knowm.xchange.exceptions.ExchangeUnavailableException;
 
 public class BybitStreamingTradeService implements StreamingTradeService {
 

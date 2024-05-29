@@ -10,6 +10,9 @@ import dto.trade.BybitComplexPositionChanges;
 import dto.trade.BybitOrderChangesResponse;
 import dto.trade.BybitOrderChangesResponse.BybitOrderChanges;
 import dto.trade.BybitPositionChangesResponse.BybitPositionChanges;
+import dto.trade.BybitOrderChangesResponse;
+import dto.trade.BybitOrderChangesResponse.BybitOrderChanges;
+import dto.trade.BybitPositionChangesResponse.BybitPositionChanges;
 import dto.trade.BybitTrade;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -142,5 +145,24 @@ public class BybitStreamAdapters {
       result.add(positionChanges);
     }
     return result;
+  }
+  public static OpenPositions adaptPositionChanges(
+      List<BybitPositionChanges> bybitPositionChanges) {
+    OpenPositions openPositions = new OpenPositions(new ArrayList<>());
+    for (BybitPositionChanges position : bybitPositionChanges) {
+      OpenPosition.Type type = null;
+      if(!position.getSide().isEmpty()) {
+        type = position.getSide().equals("Sell") ? Type.LONG : Type.SHORT;
+      }
+      BigDecimal liqPrice = null;
+      if(!position.getLiqPrice().isEmpty()) {
+        liqPrice = new BigDecimal(position.getLiqPrice());
+      }
+      OpenPosition openPosition = new OpenPosition(guessSymbol(position.getSymbol(),
+          position.getCategory()),type,new BigDecimal(position.getSize()),
+          new BigDecimal(position.getPositionValue()), liqPrice, new BigDecimal(position.getUnrealisedPnl()));
+      openPositions.getOpenPositions().add(openPosition);
+    }
+    return openPositions;
   }
 }
