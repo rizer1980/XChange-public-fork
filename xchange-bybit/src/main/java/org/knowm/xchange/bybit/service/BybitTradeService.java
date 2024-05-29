@@ -11,12 +11,15 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
+import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTicker;
+import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTickers;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderResponse;
 import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetail;
 import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetails;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.service.trade.TradeService;
 
 public class BybitTradeService extends BybitTradeServiceRaw implements TradeService {
@@ -33,7 +36,7 @@ public class BybitTradeService extends BybitTradeServiceRaw implements TradeServ
             BybitAdapters.convertToBybitSymbol(marketOrder.getInstrument()),
             BybitAdapters.getSideString(marketOrder.getType()),
             marketOrder.getOriginalAmount(),
-            marketOrder.getId());
+            marketOrder.getUserReference());
 
     return orderResponseBybitResult.getResult().getOrderId();
   }
@@ -47,7 +50,7 @@ public class BybitTradeService extends BybitTradeServiceRaw implements TradeServ
             BybitAdapters.getSideString(limitOrder.getType()),
             limitOrder.getOriginalAmount(),
             limitOrder.getLimitPrice(),
-            limitOrder.getId());
+            limitOrder.getUserReference());
 
     return orderResponseBybitResult.getResult().getOrderId();
   }
@@ -73,6 +76,25 @@ public class BybitTradeService extends BybitTradeServiceRaw implements TradeServ
 
     return results;
   }
+
+
+  public String amendOrder(Order order) throws IOException {
+    BybitCategory category = BybitAdapters.getCategory(order.getInstrument());
+    BybitResult<BybitOrderResponse> response = null;
+    if (order instanceof LimitOrder) {
+      response = amendOrder(category,
+          convertToBybitSymbol(order.getInstrument()), order.getId(), order.getUserReference(),
+          null, order.getOriginalAmount().toString(), ((LimitOrder) order)
+              .getLimitPrice().toString(), null, null, null,
+          null, null, null, null, null);
+    }
+    //Todo order instanceof StopOrder
+    if (response != null) {
+      return response.getResult().getOrderId();
+    }
+    return "";
+  }
+
 
   public String cancelOrder(Order order) throws IOException {
     BybitCategory category = BybitAdapters.getCategory(order.getInstrument());

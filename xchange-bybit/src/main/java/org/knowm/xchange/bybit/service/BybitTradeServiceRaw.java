@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitPlaceOrderPayload;
 import org.knowm.xchange.bybit.dto.BybitResult;
@@ -81,4 +82,26 @@ public class BybitTradeServiceRaw extends BybitBaseService {
     }
     return cancelOrder;
   }
+
+  public BybitResult<BybitOrderResponse> amendOrder(BybitCategory category, String symbol, String orderId,
+      String orderLinkId, String triggerPrice, String qty, String price, String tpslMode, String takeProfit,
+      String stopLoss, String tpTriggerBy,String slTriggerBy,String triggerBy,String tpLimitPrice,
+  String slLimitPrice) throws IOException {
+    //if only userId is used, don't need to send id
+    if(orderId!= null && orderId.isEmpty())
+      orderId = null;
+    BybitAmendOrderPayload payload = new BybitAmendOrderPayload(category, symbol,orderId,orderLinkId,triggerPrice,qty,price,
+    tpslMode, takeProfit, stopLoss, tpTriggerBy, slTriggerBy, triggerBy, tpLimitPrice, slLimitPrice);
+    BybitResult<BybitOrderResponse> amendOrder =
+    bybitAuthenticated.amendOrder(
+        apiKey,
+        signatureCreator,
+        nonceFactory,
+        payload);
+    if (!amendOrder.isSuccess()) {
+      throw createBybitExceptionFromResult(amendOrder);
+    }
+    return amendOrder;
+  }
+
 }
