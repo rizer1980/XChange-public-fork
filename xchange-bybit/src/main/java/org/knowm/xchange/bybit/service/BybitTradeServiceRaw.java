@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitAdvancedOrder.SlTriggerBy;

@@ -1,8 +1,10 @@
 package org.knowm.xchange.bybit.dto.trade;
 
+import lombok.Getter;
 import org.knowm.xchange.bybit.Bybit;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 
+@Getter
 public class BybitCancelOrderPayload {
 
   private BybitCategory category;
