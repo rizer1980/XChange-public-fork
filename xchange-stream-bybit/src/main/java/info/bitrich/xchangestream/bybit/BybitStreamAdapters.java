@@ -146,23 +146,4 @@ public class BybitStreamAdapters {
     }
     return result;
   }
-  public static OpenPositions adaptPositionChanges(
-      List<BybitPositionChanges> bybitPositionChanges) {
-    OpenPositions openPositions = new OpenPositions(new ArrayList<>());
-    for (BybitPositionChanges position : bybitPositionChanges) {
-      OpenPosition.Type type = null;
-      if(!position.getSide().isEmpty()) {
-        type = position.getSide().equals("Sell") ? Type.LONG : Type.SHORT;
-      }
-      BigDecimal liqPrice = null;
-      if(!position.getLiqPrice().isEmpty()) {
-        liqPrice = new BigDecimal(position.getLiqPrice());
-      }
-      OpenPosition openPosition = new OpenPosition(guessSymbol(position.getSymbol(),
-          position.getCategory()),type,new BigDecimal(position.getSize()),
-          new BigDecimal(position.getPositionValue()), liqPrice, new BigDecimal(position.getUnrealisedPnl()));
-      openPositions.getOpenPositions().add(openPosition);
-    }
-    return openPositions;
-  }
 }
