@@ -17,7 +17,7 @@ import org.knowm.xchange.instrument.Instrument;
 @Setter
 public class BybitComplexOrderChanges extends Order {
   private BybitCategory category;
-  private String price;
+  private BigDecimal price;
   private BybitSide side;
   private BigDecimal leavesQty;
   private BigDecimal leavesValue;
@@ -39,7 +39,7 @@ public class BybitComplexOrderChanges extends Order {
   public BybitComplexOrderChanges(OrderType type, BigDecimal originalAmount, Instrument instrument,
       String id, Date timestamp, BigDecimal averagePrice, BigDecimal cumulativeAmount,
       BigDecimal fee, OrderStatus status, String userReference, BybitCategory category,
-      String price, BybitSide side, BigDecimal leavesQty, BigDecimal leavesValue,
+      BigDecimal price, BybitSide side, BigDecimal leavesQty, BigDecimal leavesValue,
       BigDecimal cumExecValue, String feeCurrency, TimeInForce timeInForce,
       BybitOrderType orderType, boolean reduceOnly, Date updatedTime) {
     super(type, originalAmount, instrument, id, timestamp, averagePrice, cumulativeAmount, fee,

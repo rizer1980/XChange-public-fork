@@ -12,9 +12,6 @@ import dto.trade.BybitComplexPositionChanges;
 import dto.trade.BybitOrderChangesResponse;
 import dto.trade.BybitOrderChangesResponse.BybitOrderChanges;
 import dto.trade.BybitPositionChangesResponse.BybitPositionChanges;
-import dto.trade.BybitOrderChangesResponse;
-import dto.trade.BybitOrderChangesResponse.BybitOrderChanges;
-import dto.trade.BybitPositionChangesResponse.BybitPositionChanges;
 import dto.trade.BybitTrade;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -169,10 +166,10 @@ public class BybitStreamAdapters {
           new Date(Long.parseLong(change.getCreatedTime())), new BigDecimal(change.getAvgPrice()),
           new BigDecimal(change.getCumExecQty()), new BigDecimal(change.getCumExecFee()),
           adaptBybitOrderStatus(change.getOrderStatus()), change.getOrderLinkId(),
-          change.getCategory(),
-          change.getPrice(), change.getSide(), new BigDecimal(change.getLeavesQty()),
-          new BigDecimal(change.getLeavesValue()), new BigDecimal(change.getCumExecValue()),
-          change.getFeeCurrency(), TimeInForce.valueOf(change.getTimeInForce()), change.getOrderType(),
+          change.getCategory(), new BigDecimal(change.getPrice()), change.getSide(),
+          new BigDecimal(change.getLeavesQty()), new BigDecimal(change.getLeavesValue()),
+          new BigDecimal(change.getCumExecValue()), change.getFeeCurrency(),
+          TimeInForce.valueOf(change.getTimeInForce()), change.getOrderType(),
           change.isReduceOnly(), new Date(Long.parseLong(change.getUpdatedTime())));
       result.add(orderChanges);
     }
