@@ -169,7 +169,7 @@ public class BybitStreamAdapters {
           change.getCategory(), new BigDecimal(change.getPrice()), change.getSide(),
           new BigDecimal(change.getLeavesQty()), new BigDecimal(change.getLeavesValue()),
           new BigDecimal(change.getCumExecValue()), change.getFeeCurrency(),
-          TimeInForce.valueOf(change.getTimeInForce()), change.getOrderType(),
+          TimeInForce.valueOf(change.getTimeInForce().toUpperCase()), change.getOrderType(),
           change.isReduceOnly(), new Date(Long.parseLong(change.getUpdatedTime())));
       result.add(orderChanges);
     }
