@@ -160,10 +160,10 @@ public class BybitStreamAdapters {
     List<BybitComplexOrderChanges> result = new ArrayList<>();
     for (BybitOrderChanges change : data) {
       Order.OrderType orderType = getOrderType(change.getSide());
-      new Timestamp(Long.parseLong(change.getUpdatedTime()));
+      BigDecimal avgPrice = change.getAvgPrice().isEmpty() ? null : new BigDecimal(change.getAvgPrice());
       BybitComplexOrderChanges orderChanges = new BybitComplexOrderChanges(orderType,
           new BigDecimal(change.getQty()), guessSymbol(change.getSymbol()), change.getOrderId(),
-          new Date(Long.parseLong(change.getCreatedTime())), new BigDecimal(change.getAvgPrice()),
+          new Date(Long.parseLong(change.getCreatedTime())), avgPrice,
           new BigDecimal(change.getCumExecQty()), new BigDecimal(change.getCumExecFee()),
           adaptBybitOrderStatus(change.getOrderStatus()), change.getOrderLinkId(),
           change.getCategory(), new BigDecimal(change.getPrice()), change.getSide(),
