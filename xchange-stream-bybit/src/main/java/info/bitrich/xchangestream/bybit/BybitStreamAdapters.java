@@ -162,7 +162,7 @@ public class BybitStreamAdapters {
       Order.OrderType orderType = getOrderType(change.getSide());
       BigDecimal avgPrice = change.getAvgPrice().isEmpty() ? null : new BigDecimal(change.getAvgPrice());
       BybitComplexOrderChanges orderChanges = new BybitComplexOrderChanges(orderType,
-          new BigDecimal(change.getQty()), guessSymbol(change.getSymbol()), change.getOrderId(),
+          new BigDecimal(change.getQty()), guessSymbol(change.getSymbol(),change.getCategory()), change.getOrderId(),
           new Date(Long.parseLong(change.getCreatedTime())), avgPrice,
           new BigDecimal(change.getCumExecQty()), new BigDecimal(change.getCumExecFee()),
           adaptBybitOrderStatus(change.getOrderStatus()), change.getOrderLinkId(),
