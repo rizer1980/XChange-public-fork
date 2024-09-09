@@ -108,6 +108,19 @@ public interface BybitAuthenticated {
       throws IOException,BybitException;
 
   /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/order/cancel-order">API</a>
+   */
+  @POST
+  @Path("/order/cancel")
+  @Consumes(MediaType.APPLICATION_JSON)
+  BybitResult<BybitOrderResponse> cancelOrder(
+      @HeaderParam(X_BAPI_API_KEY) String apiKey,
+      @HeaderParam(X_BAPI_SIGN) ParamsDigest signature,
+      @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
+      BybitCancelOrderPayload payload)
+      throws IOException,BybitException;
+
+  /**
    * @apiSpec <https://bybit-exchange.github.io/docs/v5/order/amend-order">API</a>
    */
   @POST
@@ -145,4 +158,5 @@ public interface BybitAuthenticated {
       @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
       BybitPlaceOrderPayload payload)
       throws IOException, BybitException;
+
 }
