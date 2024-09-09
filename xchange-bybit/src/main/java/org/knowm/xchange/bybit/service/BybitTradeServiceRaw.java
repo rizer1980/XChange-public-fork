@@ -110,22 +110,6 @@ public class BybitTradeServiceRaw extends BybitBaseService {
     return amendOrder;
   }
 
-
-  public BybitResult<BybitOrderResponse> cancelOrder(BybitCategory category,String symbol,
-  String orderId, String orderLinkId) throws IOException {
-    BybitCancelOrderPayload payload = new BybitCancelOrderPayload(category, symbol, orderId, orderLinkId);
-    BybitResult<BybitOrderResponse> cancelOrder =
-        bybitAuthenticated.cancelOrder(
-            apiKey,
-            signatureCreator,
-            nonceFactory,
-            payload);
-    if (!cancelOrder.isSuccess()) {
-      throw createBybitExceptionFromResult(cancelOrder);
-    }
-    return cancelOrder;
-  }
-
   public BybitResult<BybitOrderResponse> placeAdvancedOrder(BybitCategory category, String symbol,
       BybitSide side, BybitOrderType orderType, BigDecimal qty, BigDecimal limitPrice,
       String orderLinkId, BigDecimal stopLoss, SlTriggerBy slTriggerBy, BigDecimal slLimitPrice,
