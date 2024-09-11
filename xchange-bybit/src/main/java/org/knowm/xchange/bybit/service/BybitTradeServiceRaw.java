@@ -9,11 +9,10 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
-import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
-import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
-import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitAdvancedOrder.SlTriggerBy;
 import org.knowm.xchange.bybit.dto.trade.BybitAdvancedOrder.TimeInForce;
+import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderPayload;
+import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitPlaceOrderPayload;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderResponse;
@@ -58,10 +57,11 @@ public class BybitTradeServiceRaw extends BybitBaseService {
 
   public BybitResult<BybitOrderResponse> placeLimitOrder(
       BybitCategory category, String symbol, BybitSide side, BigDecimal qty, BigDecimal limitPrice,
-      String orderLinkId)
+      String orderLinkId, boolean reduceOnly)
       throws IOException {
     BybitPlaceOrderPayload payload = new BybitPlaceOrderPayload(category,
         symbol, side, BybitOrderType.LIMIT, qty, orderLinkId, limitPrice);
+    payload.setReduceOnly(String.valueOf(reduceOnly));
     BybitResult<BybitOrderResponse> placeOrder =
         bybitAuthenticated.placeLimitOrder(
             apiKey,
@@ -72,21 +72,6 @@ public class BybitTradeServiceRaw extends BybitBaseService {
       throw createBybitExceptionFromResult(placeOrder);
     }
     return placeOrder;
-  }
-
-  public BybitResult<BybitOrderResponse> cancelOrder(BybitCategory category,String symbol,
-  String orderId, String orderLinkId) throws IOException {
-    BybitCancelOrderPayload payload = new BybitCancelOrderPayload(category, symbol, orderId, orderLinkId);
-    BybitResult<BybitOrderResponse> cancelOrder =
-        bybitAuthenticated.cancelOrder(
-            apiKey,
-            signatureCreator,
-            nonceFactory,
-            payload);
-    if (!cancelOrder.isSuccess()) {
-      throw createBybitExceptionFromResult(cancelOrder);
-    }
-    return cancelOrder;
   }
 
   public BybitResult<BybitOrderResponse> amendOrder(BybitCategory category, String symbol, String orderId,
@@ -110,14 +95,15 @@ public class BybitTradeServiceRaw extends BybitBaseService {
     return amendOrder;
   }
 
+
   public BybitResult<BybitOrderResponse> placeAdvancedOrder(BybitCategory category, String symbol,
       BybitSide side, BybitOrderType orderType, BigDecimal qty, BigDecimal limitPrice,
       String orderLinkId, BigDecimal stopLoss, SlTriggerBy slTriggerBy, BigDecimal slLimitPrice,
-      BybitOrderType slOrderType, boolean reduceOnly, TimeInForce timeInForce)
+      BybitOrderType slOrderType, boolean reduceOnly, int positionIdx, TimeInForce timeInForce)
       throws IOException {
 
     BybitPlaceOrderPayload payload = new BybitPlaceOrderPayload(category, symbol, side, orderType,
-        qty, orderLinkId, limitPrice);
+        qty, orderLinkId, positionIdx, limitPrice);
     if (stopLoss != null && slTriggerBy != null && slLimitPrice != null && slOrderType != null) {
       payload.setStopLoss(stopLoss.toString());
       payload.setSlTriggerBy(slTriggerBy.getValue());
@@ -142,5 +128,20 @@ public class BybitTradeServiceRaw extends BybitBaseService {
       throw createBybitExceptionFromResult(placeOrder);
     }
     return placeOrder;
+  }
+
+  public BybitResult<BybitOrderResponse> cancelOrder(BybitCategory category,String symbol,
+  String orderId, String orderLinkId) throws IOException {
+    BybitCancelOrderPayload payload = new BybitCancelOrderPayload(category, symbol, orderId, orderLinkId);
+    BybitResult<BybitOrderResponse> cancelOrder =
+        bybitAuthenticated.cancelOrder(
+            apiKey,
+            signatureCreator,
+            nonceFactory,
+            payload);
+    if (!cancelOrder.isSuccess()) {
+      throw createBybitExceptionFromResult(cancelOrder);
+    }
+    return cancelOrder;
   }
 }
