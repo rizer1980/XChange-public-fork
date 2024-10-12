@@ -7,13 +7,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.bybit.BybitAdapters;
+import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
+import org.knowm.xchange.bybit.dto.account.feerates.BybitFeeRates;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitAccountBalance;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitAccountType;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitWalletBalance;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Wallet;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 
 public class BybitAccountService extends BybitAccountServiceRaw implements AccountService {
@@ -29,6 +33,20 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
   public AccountInfo getAccountInfo() throws IOException {
     List<Wallet> adaptedWallets = getAdaptedWallets();
     return new AccountInfo(adaptedWallets);
+  }
+
+  public boolean setLeverage(BybitCategory category, Instrument instrument, double leverage)
+      throws IOException {
+    int retCode = setLeverageRaw(category, BybitAdapters.convertToBybitSymbol(instrument),
+        leverage).getRetCode();
+    return retCode == 0 || retCode == 110043;
+  }
+
+  public boolean switchMode(BybitCategory category, Instrument instrument, String coin,int mode) throws IOException {
+    String symbol = "";
+    if(instrument!= null)
+      symbol = BybitAdapters.convertToBybitSymbol(instrument);
+    return switchModeRaw(category, symbol, coin, mode).isSuccess();
   }
 
   private List<Wallet> getAdaptedWallets() throws IOException {
@@ -61,5 +79,10 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
     return accounts.stream()
         .map(bybitAccountBalance -> adaptBybitBalances(bybitAccountBalance.getCoin()))
         .collect(Collectors.toList());
+  }
+
+  public BybitResult<BybitFeeRates> getFeeRates(BybitCategory category, String symbol)
+      throws IOException {
+    return getFeeRatesRaw(category, symbol);
   }
 }

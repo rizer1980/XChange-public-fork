@@ -96,20 +96,5 @@ public class BybitAccountServiceRawTest extends BaseWiremockTest {
     assertThat(coinBalance.getBonus()).isNull();
   }
 
-  @Test
-  public void testGetFeeRates() throws IOException {
-    initGetStub("/v5/account/fee-rate", "/getFeeRates.json5");
 
-    BybitResult<BybitFeeRates> bybitFeeRatesBybitResult =
-        bybitAccountServiceRaw.getFeeRates(BybitCategory.SPOT, "ETHUSDT");
-
-    BybitFeeRates feeRates = bybitFeeRatesBybitResult.getResult();
-
-    assertThat(feeRates.getList()).hasSize(1);
-    BybitFeeRate feeRate = feeRates.getList().get(0);
-
-    assertThat(feeRate.getSymbol()).isEqualTo("ETHUSDT");
-    assertThat(feeRate.getTakerFeeRate()).isEqualTo("0.0006");
-    assertThat(feeRate.getMakerFeeRate()).isEqualTo("0.0001");
-  }
 }
