@@ -8,6 +8,8 @@ import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
 import org.knowm.xchange.bybit.dto.account.feerates.BybitFeeRates;
+import org.knowm.xchange.bybit.dto.account.position.BybitSetLeveragePayload;
+import org.knowm.xchange.bybit.dto.account.position.BybitSwitchModePayload;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitAccountType;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitWalletBalance;
 
@@ -39,7 +41,7 @@ public class BybitAccountServiceRaw extends BybitBaseService {
     return allCoinsBalance;
   }
 
-  public BybitResult<BybitFeeRates> getFeeRates(BybitCategory category, String symbol)
+  public BybitResult<BybitFeeRates> getFeeRatesRaw(BybitCategory category, String symbol)
       throws IOException {
     BybitResult<BybitFeeRates> bybitFeeRatesResult =
         bybitAuthenticated.getFeeRates(
@@ -48,5 +50,28 @@ public class BybitAccountServiceRaw extends BybitBaseService {
       throw createBybitExceptionFromResult(bybitFeeRatesResult);
     }
     return bybitFeeRatesResult;
+  }
+
+  public BybitResult<Object> setLeverageRaw(BybitCategory category, String symbol, double leverage) throws IOException {
+    String leverageString = Double.toString(leverage);
+    BybitSetLeveragePayload payload = new BybitSetLeveragePayload(category.getValue(), symbol,
+        leverageString,leverageString);
+    BybitResult<Object> setLeverageResult = bybitAuthenticated.setLeverage(
+        apiKey, signatureCreator, nonceFactory, payload);
+    //retCode=110043, retMsg=leverage not modified - also is success
+    if (!setLeverageResult.isSuccess() && setLeverageResult.getRetCode() != 110043) {
+      throw createBybitExceptionFromResult(setLeverageResult);
+    }
+    return setLeverageResult;
+  }
+
+  public BybitResult<Object> switchModeRaw(BybitCategory category, String symbol,String coin, int mode) throws IOException {
+    BybitSwitchModePayload payload = new BybitSwitchModePayload(category.getValue(), symbol, coin, mode);
+    BybitResult<Object> setLeverageResult = bybitAuthenticated.switchMode(
+        apiKey, signatureCreator, nonceFactory, payload);
+    if (!setLeverageResult.isSuccess()) {
+      throw createBybitExceptionFromResult(setLeverageResult);
+    }
+    return setLeverageResult;
   }
 }
