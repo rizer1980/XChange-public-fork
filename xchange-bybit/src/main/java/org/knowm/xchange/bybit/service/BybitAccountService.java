@@ -46,7 +46,8 @@ public class BybitAccountService extends BybitAccountServiceRaw implements Accou
     String symbol = "";
     if(instrument!= null)
       symbol = BybitAdapters.convertToBybitSymbol(instrument);
-    return switchModeRaw(category, symbol, coin, mode).isSuccess();
+    int retCode =switchModeRaw(category, symbol, coin, mode).getRetCode();
+    return retCode == 0 || retCode == 110025;
   }
 
   private List<Wallet> getAdaptedWallets() throws IOException {

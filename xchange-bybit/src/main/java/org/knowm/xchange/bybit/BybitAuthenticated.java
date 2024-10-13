@@ -161,7 +161,6 @@ public interface BybitAuthenticated {
       @HeaderParam(X_BAPI_TIMESTAMP) SynchronizedValueFactory<Long> timestamp,
       BybitSwitchModePayload payload)
       throws IOException, BybitException;
-      throws IOException,BybitException;
 
   /**
    * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/order/create-order">API</a>

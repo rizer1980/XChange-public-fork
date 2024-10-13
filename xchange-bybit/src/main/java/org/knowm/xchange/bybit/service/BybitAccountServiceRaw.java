@@ -67,11 +67,12 @@ public class BybitAccountServiceRaw extends BybitBaseService {
 
   public BybitResult<Object> switchModeRaw(BybitCategory category, String symbol,String coin, int mode) throws IOException {
     BybitSwitchModePayload payload = new BybitSwitchModePayload(category.getValue(), symbol, coin, mode);
-    BybitResult<Object> setLeverageResult = bybitAuthenticated.switchMode(
+    BybitResult<Object> switchModeResult = bybitAuthenticated.switchMode(
         apiKey, signatureCreator, nonceFactory, payload);
-    if (!setLeverageResult.isSuccess()) {
-      throw createBybitExceptionFromResult(setLeverageResult);
+    //retCode=110025, retMsg=Position mode is not modified - also is success
+    if (!switchModeResult.isSuccess() && switchModeResult.getRetCode() != 110025) {
+      throw createBybitExceptionFromResult(switchModeResult);
     }
-    return setLeverageResult;
+    return switchModeResult;
   }
 }
