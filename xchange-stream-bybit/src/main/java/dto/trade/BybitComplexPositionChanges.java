@@ -10,7 +10,7 @@ import org.knowm.xchange.instrument.Instrument;
 
 @Getter
 @Setter
-@ToString
+@ToString(callSuper = true)
 public class BybitComplexPositionChanges extends OpenPosition {
 
   private int positionIdx;
