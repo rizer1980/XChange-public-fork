@@ -13,7 +13,7 @@ public class BybitPositionChangesResponse {
   private String id;
   private String topic;
   private long creationTime;
-  private List<BybitPositionChanges> data = new ArrayList<>();
+  private final List<BybitPositionChanges> data = new ArrayList<>();
 
   @Getter
   public static class BybitPositionChanges {
