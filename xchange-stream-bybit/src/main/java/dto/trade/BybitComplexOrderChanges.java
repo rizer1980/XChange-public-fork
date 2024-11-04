@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.bybit.dto.trade.BybitOrderType;
 import org.knowm.xchange.bybit.dto.trade.BybitSide;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.instrument.Instrument;
@@ -32,6 +33,7 @@ public class BybitComplexOrderChanges extends Order {
   private BigDecimal cumExecFee;
   private String feeCurrency;
   private TimeInForce timeInForce;
+  private BybitOrderType orderType;
   private String stopOrderType;
   private String ocoTriggerBy;
   private String orderIv;
@@ -62,7 +64,7 @@ public class BybitComplexOrderChanges extends Order {
       BigDecimal qty, BybitSide side, int positionIdx, String createType, String cancelType,
       String rejectReason, BigDecimal leavesQty, BigDecimal leavesValue,
       BigDecimal cumExecQty, BigDecimal cumExecValue, BigDecimal cumExecFee, String feeCurrency,
-      TimeInForce timeInForce, String stopOrderType, String ocoTriggerBy,
+      TimeInForce timeInForce, BybitOrderType orderType, String stopOrderType, String ocoTriggerBy,
       String orderIv, String marketUnit, BigDecimal triggerPrice, BigDecimal takeProfit,
       BigDecimal stopLoss, String tpslMode, BigDecimal tpLimitPrice, BigDecimal slLimitPrice,
       String tpTriggerBy, String slTriggerBy, int triggerDirection, String triggerBy,
@@ -87,6 +89,7 @@ public class BybitComplexOrderChanges extends Order {
     this.cumExecFee = cumExecFee;
     this.feeCurrency = feeCurrency;
     this.timeInForce = timeInForce;
+    this.orderType = orderType;
     this.stopOrderType = stopOrderType;
     this.ocoTriggerBy = ocoTriggerBy;
     this.orderIv = orderIv;
