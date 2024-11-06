@@ -37,7 +37,9 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -97,12 +99,25 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
    * dedicated thread in order to avoid blocking of the Web Socket threads.
    */
   private static final Scheduler bookSnapshotsScheduler =
-      Schedulers.from(
-          Executors.newSingleThreadExecutor(
-              new ThreadFactoryBuilder()
-                  .setDaemon(true)
-                  .setNameFormat("binancefuture-book-snapshots-%d")
-                  .build()),true);
+      Schedulers.from(ex -> {
+        ExecutorService executorService = null;
+        try {
+          executorService = Executors.newSingleThreadExecutor(l -> {
+            ThreadFactory thread = new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat("binancefuture-book-snapshots-%d")
+                .setUncaughtExceptionHandler(
+                    (Thread th, Throwable e) -> LOG.error(th.getName(), e))
+                .build();
+            return thread.newThread(l);
+          });
+        } finally {
+          System.out.println(" 123");
+          if (executorService != null) {
+            executorService.shutdown();
+          }
+        }
+      }, true);
 
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
   private final BinanceMarketDataService marketDataService;
