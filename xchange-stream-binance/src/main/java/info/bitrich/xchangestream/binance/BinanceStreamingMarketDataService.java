@@ -805,6 +805,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     public void dispose() {
       if (!isDisposed()) {
         booksSubject.onComplete();
+        exec.shutdown();
         disposables.dispose();
       }
     }
@@ -851,7 +852,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         }
       }
       Disposable deltasObservableDispose;
-        try {
+//        try {
           Scheduler bookSnapshotsScheduler = Schedulers. from(exec);
           deltasObservableDispose =
               deltasObservable
@@ -881,9 +882,9 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                         }
                       },
                       error -> disposeWithError(error));
-        } finally {
-          exec. shutdown();
-        }
+//        } finally {
+//          exec. shutdown();
+//        }
       return deltasObservableDispose;
     }
 
