@@ -94,30 +94,25 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   private final Map<Instrument, Observable<DepthBinanceWebSocketTransaction>>
       orderBookRawUpdatesSubscriptions;
 
+
+  ExecutorService exec = Executors.newSingleThreadExecutor(l -> {
+    ThreadFactory thread = new ThreadFactoryBuilder()
+        .setDaemon(true)
+        .setNameFormat("binancefuture-book-snapshots-%d")
+        .setUncaughtExceptionHandler(
+            (Thread th, Throwable e) -> LOG.error(th.getName(), e))
+        .build();
+    return thread.newThread(l);
+  });
   /**
    * A scheduler for initialisation of binance order book snapshots, which is delegated to a
    * dedicated thread in order to avoid blocking of the Web Socket threads.
    */
-  private static final Scheduler bookSnapshotsScheduler =
-      Schedulers.from(ex -> {
-        ExecutorService executorService = null;
-        try {
-          executorService = Executors.newSingleThreadExecutor(l -> {
-            ThreadFactory thread = new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat("binancefuture-book-snapshots-%d")
-                .setUncaughtExceptionHandler(
-                    (Thread th, Throwable e) -> LOG.error(th.getName(), e))
-                .build();
-            return thread.newThread(l);
-          });
-        } finally {
-          System.out.println(" 123");
-          if (executorService != null) {
-            executorService.shutdown();
-          }
-        }
-      }, true);
+  private static final Scheduler bookSnapshotsScheduler = null;
+
+
+
+
 
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
   private final BinanceMarketDataService marketDataService;
@@ -855,34 +850,41 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
           }
         }
       }
-      return deltasObservable
-          .firstOrError()
-          .observeOn(bookSnapshotsScheduler)
-          .flatMap(delta -> fetchSingleBinanceOrderBookUpdatedAfter(delta))
-          .subscribe(
-              binanceBook -> {
-                final OrderBook convertedBook =
-                    BinanceMarketDataService.convertOrderBook(binanceBook, instrument);
-
-                synchronized (bookIntegrityMonitor) {
-                  book = convertedBook;
-                  final List<DepthBinanceWebSocketTransaction> applicableBookPatches =
-                      deltasBuffer.stream()
-                          .filter(delta -> delta.getLastUpdateId() >= binanceBook.lastUpdateId)
-                          .collect(Collectors.toList());
-                  // Drop any event where u is < lastUpdateId in the snapshot.
-                  deltasBuffer.clear();
-                  // Update the book with all buffered deltas (as probably nobody would like to be
-                  // notified with an already outdated snapshot).
-                  for (DepthBinanceWebSocketTransaction applicableBookPatch :
-                      applicableBookPatches) {
-                    if (!appendDelta(applicableBookPatch)) {
-                      disposables.add(asyncInitializeOrderBookSnapshot());
-                    }
-                  }
-                }
-              },
-              error -> disposeWithError(error));
+      Disposable deltasObservableDispose;
+        try {
+          Scheduler bookSnapshotsScheduler = Schedulers. from(exec);
+          deltasObservableDispose =
+              deltasObservable
+                  .firstOrError()
+                  .observeOn(bookSnapshotsScheduler)
+                  .flatMap(delta -> fetchSingleBinanceOrderBookUpdatedAfter(delta))
+                  .subscribe(
+                      binanceBook -> {
+                        final OrderBook convertedBook =
+                            BinanceMarketDataService.convertOrderBook(binanceBook, instrument);
+                        synchronized (bookIntegrityMonitor) {
+                          book = convertedBook;
+                          final List<DepthBinanceWebSocketTransaction> applicableBookPatches =
+                              deltasBuffer.stream()
+                                  .filter(delta -> delta.getLastUpdateId() >= binanceBook.lastUpdateId)
+                                  .collect(Collectors.toList());
+                          // Drop any event where u is < lastUpdateId in the snapshot.
+                          deltasBuffer.clear();
+                          // Update the book with all buffered deltas (as probably nobody would like to be
+                          // notified with an already outdated snapshot).
+                          for (DepthBinanceWebSocketTransaction applicableBookPatch :
+                              applicableBookPatches) {
+                            if (!appendDelta(applicableBookPatch)) {
+                              disposables.add(asyncInitializeOrderBookSnapshot());
+                            }
+                          }
+                        }
+                      },
+                      error -> disposeWithError(error));
+        } finally {
+          exec. shutdown();
+        }
+      return deltasObservableDispose;
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
