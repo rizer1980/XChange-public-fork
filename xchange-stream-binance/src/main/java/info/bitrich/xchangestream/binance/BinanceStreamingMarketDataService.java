@@ -399,7 +399,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         orderBookUpdatesSubscriptions.remove(instrument);
         orderBookRawUpdatesSubscriptions.remove(instrument);
 
-        bookSnapshotsScheduler.shutdown();
+//        bookSnapshotsScheduler.shutdown();
         break;
       case TRADE:
         tradeSubscriptions.remove(instrument);
