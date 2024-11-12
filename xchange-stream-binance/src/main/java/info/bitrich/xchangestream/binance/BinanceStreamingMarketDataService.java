@@ -37,9 +37,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -95,22 +93,17 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   private final Map<Instrument, Observable<DepthBinanceWebSocketTransaction>>
       orderBookRawUpdatesSubscriptions;
 
-
-  ExecutorService exec = Executors.newSingleThreadExecutor(l -> {
-    ThreadFactory thread = new ThreadFactoryBuilder()
-        .setDaemon(true)
-        .setNameFormat("binancefuture-book-snapshots-%d")
-        .setUncaughtExceptionHandler(
-            (Thread th, Throwable e) -> LOG.error(th.getName(), e))
-        .build();
-    return thread.newThread(l);
-  });
   /**
    * A scheduler for initialisation of binance order book snapshots, which is delegated to a
    * dedicated thread in order to avoid blocking of the Web Socket threads.
    */
-  private static final Scheduler bookSnapshotsScheduler = null;
-
+  private static final Scheduler bookSnapshotsScheduler =
+      Schedulers.from(
+          Executors.newSingleThreadExecutor(
+              new ThreadFactoryBuilder()
+        .setDaemon(true)
+        .setNameFormat("binancefuture-book-snapshots-%d")
+                  .build()));
 
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
   private final BinanceMarketDataService marketDataService;
@@ -207,11 +200,8 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   private Observable<OrderBook> initOrderBookIfAbsent(Instrument instrument) {
     orderBookRawUpdatesSubscriptions.computeIfAbsent(
         instrument, s -> triggerObservableBody(rawOrderBookUpdates(instrument)));
-    if (instrument instanceof FuturesContract) {
-      return createOrderBookFutureObservable(instrument);
-    } else {
-      return createOrderBookObservable(instrument);
-    }
+    if (instrument instanceof FuturesContract) return createOrderBookFutureObservable(instrument);
+    else return createOrderBookObservable(instrument);
   }
 
   public Observable<BinanceTicker24h> getRawTicker(Instrument instrument) {
@@ -335,8 +325,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   /**
    * Registers subscriptions with the streaming service for the given products.
    *
-   * <p>As we receive messages as soon as the connection is open, we need to register subscribers
-   * to
+   * <p>As we receive messages as soon as the connection is open, we need to register subscribers to
    * handle these before the first messages arrive.
    */
   public void openSubscriptions(
@@ -402,8 +391,6 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         orderbookSubscriptions.remove(instrument);
         orderBookUpdatesSubscriptions.remove(instrument);
         orderBookRawUpdatesSubscriptions.remove(instrument);
-
-//        bookSnapshotsScheduler.shutdown();
         break;
       case TRADE:
         tradeSubscriptions.remove(instrument);
@@ -503,9 +490,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     }
 
     void initSnapshotIfInvalid(Instrument instrument) {
-      if (snapshotLastUpdateId.get() != 0) {
-        return;
-      }
+      if (snapshotLastUpdateId.get() != 0) return;
       try {
         LOG.info("Fetching initial orderbook snapshot for {} ", instrument);
         onApiCall.run();
@@ -789,10 +774,9 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     }
 
     public Observable<OrderBook> connect() {
-      if (isDisposed()) {
+      if (isDisposed())
         throw new IllegalStateException(
             "Disposed before, use a new instance to connect next time.");
-      }
 
       disposables.add(asyncInitializeOrderBookSnapshot());
 
@@ -821,7 +805,6 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     public void dispose() {
       if (!isDisposed()) {
         booksSubject.onComplete();
-        exec.shutdown();
         disposables.dispose();
       }
     }
@@ -867,11 +850,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
           }
         }
       }
-      Disposable deltasObservableDispose;
-//        try {
-      Scheduler bookSnapshotsScheduler = Schedulers.from(exec);
-      deltasObservableDispose =
-          deltasObservable
+      return deltasObservable
               .firstOrError()
               .observeOn(bookSnapshotsScheduler)
               .flatMap(delta -> fetchSingleBinanceOrderBookUpdatedAfter(delta))
@@ -898,10 +877,6 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                     }
                   },
                   error -> disposeWithError(error));
-//        } finally {
-//          exec. shutdown();
-//        }
-      return deltasObservableDispose;
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
@@ -955,7 +930,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   }
 
   private Observable<OrderBook> createOrderBookFutureObservable(Instrument currencyPair) {
-    return new OrderBookFutureSubscription(
+    return new BinanceStreamingMarketDataService.OrderBookFutureSubscription(
         orderBookRawUpdatesSubscriptions.get(currencyPair), currencyPair)
         .connect();
   }
