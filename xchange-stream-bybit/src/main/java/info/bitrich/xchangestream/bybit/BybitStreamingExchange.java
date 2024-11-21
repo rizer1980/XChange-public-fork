@@ -12,14 +12,17 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
 
   private final Logger LOG = LoggerFactory.getLogger(BybitStreamingExchange.class);
 
-  //https://bybit-exchange.github.io/docs/v5/ws/connect
+  // https://bybit-exchange.github.io/docs/v5/ws/connect
   public static final String URI = "wss://stream.bybit.com/v5/public";
   public static final String TESTNET_URI = "wss://stream-testnet.bybit.com/v5/public";
-  public static final String AUTH_URI = "wss://stream.bybit.com/v5/private";
-  // stream-testnet.bybit.com - don't accept api key
-  public static final String TESTNET_AUTH_URI = "wss://stream-demo.bybit.com/v5/private";
+  // DEMO_URI websocket not worked(401 error)
+  public static final String DEMO_URI = "wss://stream-demo.bybit.com/v5/public";
 
-  //spot, linear, inverse or option
+  public static final String AUTH_URI = "wss://stream.bybit.com/v5/private";
+  public static final String TESTNET_AUTH_URI = "wss://stream-testnet.bybit.com/v5/private";
+  public static final String DEMO_AUTH_URI = "wss://stream-demo.bybit.com/v5/private";
+
+  // spot, linear, inverse or option
   public static final String EXCHANGE_TYPE = "Exchange_Type";
 
   private BybitStreamingService streamingService;
@@ -43,7 +46,11 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
       } else {
         apiUrl = URI;
       }
-      apiUrl += "/" + ((BybitCategory)exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE)).getValue();
+      apiUrl +=
+          "/"
+              + ((BybitCategory)
+                      exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE))
+                  .getValue();
     } else {
       if (Boolean.TRUE.equals(
           exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX))) {
@@ -86,5 +93,4 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
   public BybitStreamingTradeService getStreamingTradeService() {
     return streamingTradeService;
   }
-
 }

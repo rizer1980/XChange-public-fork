@@ -1,15 +1,16 @@
 package info.bitrich.xchangestream.bybit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dto.trade.BybitComplexOrderChanges;
+import dto.trade.BybitComplexPositionChanges;
 import dto.trade.BybitOrderChangesResponse;
 import dto.trade.BybitPositionChangesResponse;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
-import io.reactivex.Observable;
+import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.OpenPosition;
-import org.knowm.xchange.exceptions.ExchangeUnavailableException;
 
 public class BybitStreamingTradeService implements StreamingTradeService {
 
@@ -21,38 +22,69 @@ public class BybitStreamingTradeService implements StreamingTradeService {
   }
 
   public Observable<Order> getOrderChanges(BybitCategory category) {
-//    if(!streamingService.isAuthorized()) {
-//      throw new ExchangeUnavailableException("Not authorized");
-//    }
     String channelUniqueId = "order";
-    if(category != null) {
+    if (category != null) {
       channelUniqueId += "." + category.getValue();
     }
     return streamingService
-        .subscribeChannel(channelUniqueId).flatMap(
-        node -> {
-          BybitOrderChangesResponse bybitOrderChangesResponse = mapper.treeToValue(node, BybitOrderChangesResponse.class);
-          return Observable.fromIterable(
-              BybitStreamAdapters.adaptOrdersChanges(bybitOrderChangesResponse.getData()));
-        });
+        .subscribeChannel(channelUniqueId)
+        .flatMap(
+            node -> {
+              BybitOrderChangesResponse bybitOrderChangesResponse =
+                  mapper.treeToValue(node, BybitOrderChangesResponse.class);
+              return Observable.fromIterable(
+                  BybitStreamAdapters.adaptOrdersChanges(bybitOrderChangesResponse.getData()));
+            });
+  }
+
+  public Observable<BybitComplexOrderChanges> getComplexOrderChanges(BybitCategory category) {
+    String channelUniqueId = "order";
+    if (category != null) {
+      channelUniqueId += "." + category.getValue();
+    }
+    return streamingService
+        .subscribeChannel(channelUniqueId)
+        .flatMap(
+            node -> {
+              BybitOrderChangesResponse bybitOrderChangesResponse =
+                  mapper.treeToValue(node, BybitOrderChangesResponse.class);
+              return Observable.fromIterable(
+                  BybitStreamAdapters.adaptComplexOrdersChanges(
+                      bybitOrderChangesResponse.getData()));
+            });
   }
 
   public Observable<OpenPosition> getPositionChanges(BybitCategory category) {
-//    if(!streamingService.isAuthorized()) {
-//      throw new ExchangeUnavailableException("Not authorized");
-//    }
     String channelUniqueId = "position";
-    if(category != null) {
+    if (category != null) {
       channelUniqueId += "." + category.getValue();
     }
     return streamingService
-        .subscribeChannel(channelUniqueId).flatMap(
+        .subscribeChannel(channelUniqueId)
+        .flatMap(
             node -> {
-              BybitPositionChangesResponse bybitPositionChangesResponse = mapper.treeToValue(node,
-                  BybitPositionChangesResponse.class);
+              BybitPositionChangesResponse bybitPositionChangesResponse =
+                  mapper.treeToValue(node, BybitPositionChangesResponse.class);
               return Observable.fromIterable(
-                  BybitStreamAdapters.adaptPositionChanges(bybitPositionChangesResponse.getData()).
-                      getOpenPositions());
+                  BybitStreamAdapters.adaptPositionChanges(bybitPositionChangesResponse.getData())
+                      .getOpenPositions());
+            });
+  }
+
+  public Observable<BybitComplexPositionChanges> getBybitPositionChanges(BybitCategory category) {
+    String channelUniqueId = "position";
+    if (category != null) {
+      channelUniqueId += "." + category.getValue();
+    }
+    return streamingService
+        .subscribeChannel(channelUniqueId)
+        .flatMap(
+            node -> {
+              BybitPositionChangesResponse bybitPositionChangesResponse =
+                  mapper.treeToValue(node, BybitPositionChangesResponse.class);
+              return Observable.fromIterable(
+                  BybitStreamAdapters.adaptComplexPositionChanges(
+                      bybitPositionChangesResponse.getData()));
             });
   }
 }

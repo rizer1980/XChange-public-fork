@@ -3,7 +3,6 @@ package org.knowm.xchange.bybit.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
@@ -65,11 +64,17 @@ public class BybitMarketDataService extends BybitMarketDataServiceRaw implements
 
   @Override
   public List<Ticker> getTickers(Params params) throws IOException {
-    if (!(params instanceof BybitCategory)) {
+    // get category
+    BybitCategory category;
+    if (params == null) {
+      category = BybitCategory.SPOT;
+    } else if (!(params instanceof BybitCategory)) {
       throw new IllegalArgumentException("Params must be instance of BybitCategory");
+    } else {
+      category = (BybitCategory) params;
     }
-    BybitCategory category = (BybitCategory) params;
-    if (category.equals(BybitCategory.OPTION)) {
+
+    if (category == BybitCategory.OPTION) {
       throw new NotYetImplementedForExchangeException("category OPTION not yet implemented");
     }
     BybitResult<BybitTickers<BybitTicker>> response = getTickers(category);
@@ -77,21 +82,23 @@ public class BybitMarketDataService extends BybitMarketDataServiceRaw implements
     for (BybitTicker ticker : response.getResult().getList()) {
       switch (category) {
         case SPOT:
-          result.add(BybitAdapters.adaptBybitSpotTicker(BybitAdapters.convertBybitSymbolToInstrument
-              (ticker.getSymbol(), category), response.getTime(), (BybitSpotTicker) ticker));
+          result.add(
+              BybitAdapters.adaptBybitSpotTicker(
+                  BybitAdapters.convertBybitSymbolToInstrument(ticker.getSymbol(), category),
+                  response.getTime(),
+                  (BybitSpotTicker) ticker));
           break;
         case LINEAR:
         case INVERSE:
-          result.add(BybitAdapters.adaptBybitLinearInverseTicker(
-              BybitAdapters.convertBybitSymbolToInstrument
-                  (ticker.getSymbol(), category), response.getTime(),
-              (BybitLinearInverseTicker) ticker));
+          result.add(
+              BybitAdapters.adaptBybitLinearInverseTicker(
+                  BybitAdapters.convertBybitSymbolToInstrument(ticker.getSymbol(), category),
+                  response.getTime(),
+                  (BybitLinearInverseTicker) ticker));
           break;
         default:
       }
     }
     return result;
   }
-
 }
-

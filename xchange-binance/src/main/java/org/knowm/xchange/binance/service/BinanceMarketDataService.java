@@ -21,6 +21,7 @@ import org.knowm.xchange.dto.marketdata.FundingRates;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.dto.meta.ExchangeHealth;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.instrument.Instrument;
@@ -33,6 +34,18 @@ public class BinanceMarketDataService extends BinanceMarketDataServiceRaw
   public BinanceMarketDataService(
       BinanceExchange exchange, ResilienceRegistries resilienceRegistries) {
     super(exchange, resilienceRegistries);
+  }
+
+  @Override
+  public ExchangeHealth getExchangeHealth() {
+    try {
+      if (getSystemStatus().getStatus().equals("0")) {
+        return ExchangeHealth.ONLINE;
+      }
+    } catch (IOException e) {
+      return ExchangeHealth.OFFLINE;
+    }
+    return ExchangeHealth.OFFLINE;
   }
 
   /**
@@ -55,18 +68,17 @@ public class BinanceMarketDataService extends BinanceMarketDataServiceRaw
   @Override
   public Ticker getTicker(Instrument instrument, Object... args) throws IOException {
     try {
-      return BinanceAdapters.toTicker(ticker24hAllProducts(instrument), instrument instanceof FuturesContract);
+      return BinanceAdapters.toTicker(
+          ticker24hAllProducts(instrument), instrument instanceof FuturesContract);
     } catch (BinanceException e) {
       throw BinanceErrorAdapter.adapt(e);
     }
   }
 
-
   @Override
   public Ticker getTicker(CurrencyPair currencyPair, Object... args) throws IOException {
     return getTicker((Instrument) currencyPair, args);
   }
-
 
   @Override
   public List<Ticker> getTickers(Params params) throws IOException {
@@ -86,7 +98,6 @@ public class BinanceMarketDataService extends BinanceMarketDataServiceRaw
   public OrderBook getOrderBook(CurrencyPair currencyPair, Object... args) throws IOException {
     return getOrderBook((Instrument) currencyPair, args);
   }
-
 
   @Override
   public OrderBook getOrderBook(Instrument instrument, Object... args) throws IOException {
