@@ -5,16 +5,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.knowm.xchange.ExchangeFactory;
-import org.knowm.xchange.coinex.CoinexExchange;
+import org.knowm.xchange.coinex.CoinexIntegrationTestParent;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.meta.ExchangeHealth;
 
-class CoinexMarketDataServiceIntegration {
+class CoinexMarketDataServiceIntegration extends CoinexIntegrationTestParent {
 
-  CoinexExchange exchange = ExchangeFactory.INSTANCE.createExchange(CoinexExchange.class);
+  @Test
+  public void exchange_health() {
+    assertThat(exchange.getMarketDataService().getExchangeHealth())
+        .isEqualTo(ExchangeHealth.ONLINE);
+  }
 
   @Test
   void valid_tickers() throws IOException {

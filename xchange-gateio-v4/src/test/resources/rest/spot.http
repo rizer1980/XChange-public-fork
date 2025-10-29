@@ -1,7 +1,11 @@
+### List all currencies' details
+GET {{api_v4}}/spot/currencies
+
+
 ### List personal trading history
 < {%
   import {gen_sign} from 'sign.js'
-  gen_sign("GET", request);
+  gen_sign(request);
 %}
 
 GET {{api_v4}}/spot/my_trades
@@ -14,7 +18,7 @@ Content-Type: application/json
 ### List spot accounts
 < {%
   import {gen_sign} from 'sign.js'
-  gen_sign("GET", request);
+  gen_sign(request);
 %}
 
 GET {{api_v4}}/spot/accounts
@@ -27,7 +31,7 @@ Content-Type: application/json
 ### Query account book
 < {%
   import {gen_sign} from 'sign.js'
-  gen_sign("GET", request);
+  gen_sign(request);
 %}
 
 GET {{api_v4}}/spot/account_book
@@ -40,10 +44,10 @@ Content-Type: application/json
 ### List orders
 < {%
   import {gen_sign} from 'sign.js'
-  gen_sign("GET", request);
+  gen_sign(request);
 %}
 
-GET {{api_v4}}/spot/orders?currency_pair=VAI_USDT&status=finished
+GET {{api_v4}}/spot/orders?currency_pair=SRT_USDT&status=finished
 KEY: {{api_key}}
 SIGN: {{sign}}
 Timestamp: {{timestamp}}
@@ -53,7 +57,7 @@ Content-Type: application/json
 ### Create an order
 < {%
   import {gen_sign} from 'sign.js'
-  gen_sign("POST", request);
+  gen_sign(request);
 %}
 
 POST {{api_v4}}/spot/orders
@@ -74,12 +78,30 @@ Content-Type: application/json
 ### Cancel a single order
 < {%
   import {gen_sign} from 'sign.js'
-  gen_sign("DELETE", request);
+  gen_sign(request);
 %}
 
 DELETE {{api_v4}}/spot/orders/123456?currency_pair=BTC_USDT
 KEY: {{api_key}}
 SIGN: {{sign}}
 Timestamp: {{timestamp}}
+Content-Type: application/json
+
+
+### Get a single order
+< {%
+  import {gen_sign} from 'sign.js'
+  gen_sign(request);
+%}
+
+GET {{api_v4}}/spot/orders/745504484392?currency_pair=BTC_USDT
+KEY: {{api_key}}
+SIGN: {{sign}}
+Timestamp: {{timestamp}}
+Content-Type: application/json
+
+
+### Retrieve ticker information
+GET {{api_v4}}/spot/tickers
 Content-Type: application/json
 

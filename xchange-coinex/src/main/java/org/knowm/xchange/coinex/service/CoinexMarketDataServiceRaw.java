@@ -10,6 +10,7 @@ import org.knowm.xchange.coinex.CoinexExchange;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexAllMarketStatisticsV1;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexChainInfo;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexCurrencyPairInfo;
+import org.knowm.xchange.coinex.dto.marketdata.CoinexMaintainInfo;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexMarketDepth;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexSingleMarketStatisticsV1;
 import org.knowm.xchange.coinex.service.params.CoinexOrderBookParams;
@@ -21,8 +22,12 @@ public class CoinexMarketDataServiceRaw extends CoinexBaseService {
     super(exchange);
   }
 
+  public List<CoinexMaintainInfo> getCoinexMaintainInfo() throws IOException {
+    return coinex.maintainInfo().getData();
+  }
+
   public List<CoinexChainInfo> getAllCoinexChainInfos() throws IOException {
-    return new ArrayList<>(coinex.allChainInfos().getData().values());
+    return new ArrayList<>(coinex.allChainInfos().getData());
   }
 
   public CoinexAllMarketStatisticsV1 getCoinexAllMarketStatisticsV1() throws IOException {

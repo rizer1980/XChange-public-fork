@@ -31,7 +31,7 @@ public class IdexExchange extends BaseExchange {
 
   private ReturnCurrenciesResponse allCurrenciesStatic;
 
-  InstrumentMetaData unavailableCPMeta = new InstrumentMetaData.Builder().build();
+  InstrumentMetaData unavailableCPMeta = InstrumentMetaData.builder().build();
 
   public final InstrumentMetaData getUnavailableCPMeta() {
     return unavailableCPMeta;
@@ -142,7 +142,7 @@ public class IdexExchange extends BaseExchange {
     }
 
     public static String getMarket(CurrencyPair currencyPair) {
-      return currencyPair.counter.getSymbol() + "_" + currencyPair.base.getSymbol();
+      return currencyPair.getCounter().getSymbol() + "_" + currencyPair.getBase().getSymbol();
     }
 
     public static CurrencyPair getCurrencyPair(String market) {

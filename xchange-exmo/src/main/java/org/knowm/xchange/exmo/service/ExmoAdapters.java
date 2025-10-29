@@ -27,7 +27,7 @@ public class ExmoAdapters {
     return UserTrade.builder()
         .type(type)
         .originalAmount(amount)
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(price)
         .timestamp(date)
         .id(tradeId)
@@ -81,6 +81,8 @@ public class ExmoAdapters {
   }
 
   public static String format(CurrencyPair currencyPair) {
-    return currencyPair.base.getCurrencyCode() + "_" + currencyPair.counter.getCurrencyCode();
+    return currencyPair.getBase().getCurrencyCode()
+        + "_"
+        + currencyPair.getCounter().getCurrencyCode();
   }
 }

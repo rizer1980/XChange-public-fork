@@ -13,7 +13,7 @@ import si.mazi.rescu.SynchronizedValueFactory;
 public class OkCoinExchange extends BaseExchange {
 
   /** Adjust host parameters depending on exchange specific parameters */
-  private static void concludeHostParams(ExchangeSpecification exchangeSpecification) {
+  protected void concludeHostParams(ExchangeSpecification exchangeSpecification) {
 
     if (exchangeSpecification.getExchangeSpecificParameters() != null) {
       if (exchangeSpecification.getExchangeSpecificParametersItem("Use_Intl").equals(true)
@@ -35,7 +35,7 @@ public class OkCoinExchange extends BaseExchange {
   private static int futuresLeverageOfConfig(ExchangeSpecification exchangeSpecification) {
 
     if (exchangeSpecification.getExchangeSpecificParameters().containsKey("Futures_Leverage")) {
-      return Integer.valueOf(
+      return Integer.parseInt(
           (String) exchangeSpecification.getExchangeSpecificParameters().get("Futures_Leverage"));
     } else {
       // default choice of 10x leverage is "safe" choice and default by OkCoin.

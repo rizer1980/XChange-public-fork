@@ -2,7 +2,12 @@ package org.knowm.xchange.huobi;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -15,7 +20,11 @@ import org.knowm.xchange.dto.account.FundingRecord.Status;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades.TradeSortType;
-import org.knowm.xchange.dto.meta.*;
+import org.knowm.xchange.dto.meta.CurrencyMetaData;
+import org.knowm.xchange.dto.meta.ExchangeMetaData;
+import org.knowm.xchange.dto.meta.FeeTier;
+import org.knowm.xchange.dto.meta.InstrumentMetaData;
+import org.knowm.xchange.dto.meta.WalletHealth;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
@@ -52,7 +61,7 @@ public class HuobiAdapters {
     builder.low(huobiTicker.getLow());
     builder.quoteVolume(huobiTicker.getVol());
     builder.timestamp(huobiTicker.getTs());
-    builder.currencyPair(currencyPair);
+    builder.instrument(currencyPair);
     return builder.build();
   }
 
@@ -161,7 +170,7 @@ public class HuobiAdapters {
             ? null
             : metadata.getMinimumAmount().setScale(pair.getAmountPrecision(), RoundingMode.DOWN);
     FeeTier[] feeTiers = metadata == null ? null : metadata.getFeeTiers();
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(fee)
         .minimumAmount(minQty)
         .priceScale(pair.getPricePrecision())
@@ -307,13 +316,13 @@ public class HuobiAdapters {
     return UserTrade.builder()
         .type(order.getType())
         .originalAmount(order.getCumulativeAmount())
-        .currencyPair(order.getCurrencyPair())
+        .instrument(order.getCurrencyPair())
         .price(order.getLimitPrice())
         .timestamp(order.getTimestamp())
         .id("") // Trade id
         .orderId(order.getId()) // Original order id
         .feeAmount(feeAmount)
-        .feeCurrency(order.getCurrencyPair().counter)
+        .feeCurrency(order.getCurrencyPair().getCounter())
         .build();
   }
 
@@ -399,18 +408,17 @@ public class HuobiAdapters {
 
   public static FundingRecord adaptFundingRecord(HuobiFundingRecord r) {
 
-    return new FundingRecord(
-        r.getAddress(),
-        r.getCreatedAt(),
-        Currency.getInstance(r.getCurrency()),
-        r.getAmount(),
-        Long.toString(r.getId()),
-        r.getTxhash(),
-        r.getType(),
-        adaptFundingStatus(r),
-        null,
-        r.getFee(),
-        null);
+    return FundingRecord.builder()
+        .address(r.getAddress())
+        .date(r.getCreatedAt())
+        .currency(Currency.getInstance(r.getCurrency()))
+        .amount(r.getAmount())
+        .internalId(Long.toString(r.getId()))
+        .blockchainTransactionHash(r.getTxhash())
+        .type(r.getType())
+        .status(adaptFundingStatus(r))
+        .fee(r.getFee())
+        .build();
   }
 
   private static Status adaptFundingStatus(HuobiFundingRecord record) {

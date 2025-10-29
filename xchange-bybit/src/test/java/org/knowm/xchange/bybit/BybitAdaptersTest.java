@@ -18,11 +18,6 @@ public class BybitAdaptersTest {
     assertThat(guessSymbol("LTCBTC")).isEqualTo(new CurrencyPair("LTC", "BTC"));
     assertThat(guessSymbol("BTCDAI")).isEqualTo(new CurrencyPair("BTC", "DAI"));
     assertThat(guessSymbol("ABCDEFG")).isEqualTo(new CurrencyPair("ABCD", "EFG"));
-
-    assertThat(guessSymbol("BTCUSDT", BybitCategory.LINEAR))
-        .isEqualTo(new FuturesContract("BTC/USDT/PERP"));
-    assertThat(guessSymbol("ETHPERP", BybitCategory.LINEAR))
-        .isEqualTo(new FuturesContract("ETH/USDC/PERP"));
   }
 
   @Test
@@ -36,6 +31,8 @@ public class BybitAdaptersTest {
         .isEqualTo("ETHPERP");
     assertThat(BybitAdapters.convertToBybitSymbol(new FuturesContract("ETH/USDC/02FEB24")))
         .isEqualTo("ETH-02FEB24");
+    assertThat(BybitAdapters.convertToBybitSymbol(new FuturesContract("ETH/USDT/02FEB24")))
+        .isEqualTo("ETHUSDT-02FEB24");
     assertThat(BybitAdapters.convertToBybitSymbol(new FuturesContract("ETH/USD/H24")))
         .isEqualTo("ETHUSDH24");
 
@@ -47,14 +44,15 @@ public class BybitAdaptersTest {
   public void testConvertToInstrument() {
     assertThat(BybitAdapters.convertBybitSymbolToInstrument("BTCUSDC", BybitCategory.SPOT))
         .isEqualTo(new CurrencyPair("BTC/USDC"));
-
     assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETHUSDT", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDT/PERP"));
     assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETHPERP", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDC/PERP"));
     assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETH-02FEB24", BybitCategory.LINEAR))
         .isEqualTo(new FuturesContract("ETH/USDC/02FEB24"));
-
+    assertThat(
+            BybitAdapters.convertBybitSymbolToInstrument("ETHUSDT-02FEB24", BybitCategory.LINEAR))
+        .isEqualTo(new FuturesContract("ETH/USDT/02FEB24"));
     assertThat(BybitAdapters.convertBybitSymbolToInstrument("ETHUSDH24", BybitCategory.INVERSE))
         .isEqualTo(new FuturesContract("ETH/USD/H24"));
   }

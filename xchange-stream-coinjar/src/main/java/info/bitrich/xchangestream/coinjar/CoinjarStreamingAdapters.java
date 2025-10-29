@@ -26,10 +26,11 @@ class CoinjarStreamingAdapters {
 
   public static String adaptCurrencyPairToBookTopic(CurrencyPair pair) {
     String sep = "";
-    if (pair.base.getCurrencyCode().length() > 3 || pair.counter.getCurrencyCode().length() > 3) {
+    if (pair.getBase().getCurrencyCode().length() > 3
+        || pair.getCounter().getCurrencyCode().length() > 3) {
       sep = "-";
     }
-    return "book:" + pair.base.toString() + sep + pair.counter.toString();
+    return "book:" + pair.getBase().toString() + sep + pair.getCounter().toString();
   }
 
   public static LimitOrder toLimitOrder(
@@ -57,7 +58,7 @@ class CoinjarStreamingAdapters {
         .id(Long.toString(event.payload.fill.tid))
         .originalAmount(new BigDecimal(event.payload.fill.size))
         .type(CoinjarAdapters.buySellToOrderType(event.payload.fill.side))
-        .currencyPair(CoinjarAdapters.productToCurrencyPair(event.payload.fill.productId))
+        .instrument(CoinjarAdapters.productToCurrencyPair(event.payload.fill.productId))
         .price(new BigDecimal(event.payload.fill.price))
         .orderId(Long.toString(event.payload.fill.oid))
         .build();

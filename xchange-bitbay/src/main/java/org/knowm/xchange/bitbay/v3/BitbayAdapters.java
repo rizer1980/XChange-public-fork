@@ -42,11 +42,11 @@ public class BitbayAdapters {
               .id(trade.getId().toString())
               .type(orderType)
               .originalAmount(trade.getAmount())
-              .currencyPair(pair)
+              .instrument(pair)
               .price(trade.getRate())
               .timestamp(timestamp)
               .feeAmount(trade.getCommissionValue())
-              .feeCurrency(trade.getCommissionValue() == null ? null : pair.base)
+              .feeCurrency(trade.getCommissionValue() == null ? null : pair.getBase())
               .build());
     }
     return new UserTrades(
@@ -54,6 +54,6 @@ public class BitbayAdapters {
   }
 
   public static String adaptCurrencyPair(CurrencyPair currencyPair) {
-    return currencyPair.base + "-" + currencyPair.counter;
+    return currencyPair.getBase() + "-" + currencyPair.getCounter();
   }
 }

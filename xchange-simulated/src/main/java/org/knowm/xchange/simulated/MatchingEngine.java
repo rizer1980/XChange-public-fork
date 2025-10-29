@@ -226,7 +226,7 @@ final class MatchingEngine {
   }
 
   public List<Trade> publicTrades() {
-    return FluentIterable.from(publicTrades).transform(t -> Trade.Builder.from(t).build()).toList();
+    return new ArrayList<>(publicTrades);
   }
 
   public synchronized List<UserTrade> tradeHistory(String apiKey) {
@@ -271,7 +271,7 @@ final class MatchingEngine {
 
     UserTrade takerTrade =
         UserTrade.builder()
-            .currencyPair(currencyPair)
+            .instrument(currencyPair)
             .id(randomUUID().toString())
             .originalAmount(tradeAmount)
             .price(makerOrder.getLimitPrice())
@@ -282,7 +282,8 @@ final class MatchingEngine {
                 takerOrder.getType() == ASK
                     ? tradeAmount.multiply(makerOrder.getLimitPrice()).multiply(FEE_RATE)
                     : tradeAmount.multiply(FEE_RATE))
-            .feeCurrency(takerOrder.getType() == ASK ? currencyPair.counter : currencyPair.base)
+            .feeCurrency(
+                takerOrder.getType() == ASK ? currencyPair.getCounter() : currencyPair.getBase())
             .build();
 
     LOGGER.debug("Created taker trade: {}", takerTrade);
@@ -292,7 +293,7 @@ final class MatchingEngine {
     OrderType makerType = takerOrder.getType() == OrderType.ASK ? OrderType.BID : OrderType.ASK;
     UserTrade makerTrade =
         UserTrade.builder()
-            .currencyPair(currencyPair)
+            .instrument(currencyPair)
             .id(randomUUID().toString())
             .originalAmount(tradeAmount)
             .price(makerOrder.getLimitPrice())
@@ -303,7 +304,7 @@ final class MatchingEngine {
                 makerType == ASK
                     ? tradeAmount.multiply(makerOrder.getLimitPrice()).multiply(FEE_RATE)
                     : tradeAmount.multiply(FEE_RATE))
-            .feeCurrency(makerType == ASK ? currencyPair.counter : currencyPair.base)
+            .feeCurrency(makerType == ASK ? currencyPair.getCounter() : currencyPair.getBase())
             .build();
 
     LOGGER.debug("Created maker trade: {}", makerOrder);

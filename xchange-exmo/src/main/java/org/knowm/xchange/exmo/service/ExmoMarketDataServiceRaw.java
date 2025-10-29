@@ -79,7 +79,7 @@ public class ExmoMarketDataServiceRaw extends BaseExmoService {
       // min_quantity or min_amount ???
       currencyPairs.put(
           currencyPair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .tradingFee(tradingFee)
               .minimumAmount(new BigDecimal(data.get("min_quantity")))
               .maximumAmount(new BigDecimal(data.get("max_quantity")))
@@ -87,10 +87,10 @@ public class ExmoMarketDataServiceRaw extends BaseExmoService {
               .feeTiers(staticMeta != null ? staticMeta.getFeeTiers() : null)
               .build());
 
-      if (!currencies.containsKey(currencyPair.base))
-        currencies.put(currencyPair.base, new CurrencyMetaData(8, null));
-      if (!currencies.containsKey(currencyPair.counter))
-        currencies.put(currencyPair.counter, new CurrencyMetaData(8, null));
+      if (!currencies.containsKey(currencyPair.getBase()))
+        currencies.put(currencyPair.getBase(), new CurrencyMetaData(8, null));
+      if (!currencies.containsKey(currencyPair.getCounter()))
+        currencies.put(currencyPair.getCounter(), new CurrencyMetaData(8, null));
     }
   }
 
@@ -101,7 +101,7 @@ public class ExmoMarketDataServiceRaw extends BaseExmoService {
   public Trades trades(Collection<CurrencyPair> currencyPairs) {
     Map<String, CurrencyPair> markets = new HashMap<>();
     for (CurrencyPair currencyPair : currencyPairs) {
-      String market = currencyPair.base + "_" + currencyPair.counter;
+      String market = currencyPair.getBase() + "_" + currencyPair.getCounter();
       markets.put(market, currencyPair);
     }
     String marketNames = join(markets.keySet(), ",");
@@ -125,10 +125,10 @@ public class ExmoMarketDataServiceRaw extends BaseExmoService {
         long unixTimestamp = Long.parseLong(tradeData.get("date").toString());
 
         results.add(
-            new Trade.Builder()
+            Trade.builder()
                 .type(type.equalsIgnoreCase("sell") ? Order.OrderType.ASK : Order.OrderType.BID)
                 .originalAmount(new BigDecimal(quantity))
-                .currencyPair(currencyPair)
+                .instrument(currencyPair)
                 .price(new BigDecimal(price))
                 .timestamp(new Date(unixTimestamp * 1000L))
                 .id(id)

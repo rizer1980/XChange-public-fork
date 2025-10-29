@@ -117,5 +117,10 @@ public class BybitLinearInverseInstrumentInfo extends BybitInstrumentInfo {
     @JsonProperty("postOnlyMaxOrderQty")
     BigDecimal postOnlyMaxOrderQty;
 
+    @JsonProperty("maxMktOrderQty")
+    BigDecimal maxMktOrderQty;
+
+    @JsonProperty("minNotionalValue")
+    BigDecimal minNotionalValue;
   }
 }

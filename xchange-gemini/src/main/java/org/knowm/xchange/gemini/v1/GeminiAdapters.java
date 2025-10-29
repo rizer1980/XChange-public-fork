@@ -74,7 +74,7 @@ public final class GeminiAdapters {
 
   public static String adaptCurrencyPair(CurrencyPair pair) {
 
-    return (pair.base.getCurrencyCode() + pair.counter.getCurrencyCode()).toLowerCase();
+    return (pair.getBase().getCurrencyCode() + pair.getCounter().getCurrencyCode()).toLowerCase();
   }
 
   public static OrderBook adaptOrderBook(GeminiDepth btceDepth, CurrencyPair currencyPair) {
@@ -285,10 +285,10 @@ public final class GeminiAdapters {
     Date date =
         DateUtils.fromMillisUtc(trade.getTimestamp() * 1000L); // Gemini uses Unix timestamps
     final String tradeId = String.valueOf(trade.getTradeId());
-    return new Trade.Builder()
+    return Trade.builder()
         .type(orderType)
         .originalAmount(amount)
-        .currencyPair(currencyPair)
+        .instrument(currencyPair)
         .price(price)
         .timestamp(date)
         .id(tradeId)
@@ -420,7 +420,7 @@ public final class GeminiAdapters {
           UserTrade.builder()
               .type(orderType)
               .originalAmount(trade.getAmount())
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(trade.getPrice())
               .timestamp(timestamp)
               .id(trade.getTradeId())
@@ -447,11 +447,11 @@ public final class GeminiAdapters {
       if (!pairsMap.containsKey(c)) {
         pairsMap.put(c, null);
       }
-      if (!currenciesMap.containsKey(c.base)) {
-        currenciesMap.put(c.base, null);
+      if (!currenciesMap.containsKey(c.getBase())) {
+        currenciesMap.put(c.getBase(), null);
       }
-      if (!currenciesMap.containsKey(c.counter)) {
-        currenciesMap.put(c.counter, null);
+      if (!currenciesMap.containsKey(c.getCounter())) {
+        currenciesMap.put(c.getCounter(), null);
       }
     }
 
@@ -491,16 +491,16 @@ public final class GeminiAdapters {
             ? FundingRecord.Type.WITHDRAWAL
             : FundingRecord.Type.DEPOSIT;
 
-    return new FundingRecord.Builder()
-        .setStatus(status)
-        .setType(type)
-        .setInternalId(transfer.eid)
-        .setAddress(transfer.destination)
-        .setCurrency(Currency.getInstance(transfer.currency))
-        .setDate(DateUtils.fromMillisUtc(transfer.timestamp))
-        .setAmount(transfer.amount)
-        .setBlockchainTransactionHash(transfer.txnHash)
-        .setDescription(description)
+    return FundingRecord.builder()
+        .status(status)
+        .type(type)
+        .internalId(transfer.eid)
+        .address(transfer.destination)
+        .currency(Currency.getInstance(transfer.currency))
+        .date(DateUtils.fromMillisUtc(transfer.timestamp))
+        .amount(transfer.amount)
+        .blockchainTransactionHash(transfer.txnHash)
+        .description(description)
         .build();
   }
 

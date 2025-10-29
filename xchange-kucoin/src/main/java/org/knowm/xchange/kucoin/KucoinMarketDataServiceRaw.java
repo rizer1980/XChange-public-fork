@@ -12,10 +12,12 @@ import java.util.stream.Collectors;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kucoin.dto.KlineIntervalType;
 import org.knowm.xchange.kucoin.dto.response.AllTickersResponse;
 import org.knowm.xchange.kucoin.dto.response.CurrenciesResponse;
 import org.knowm.xchange.kucoin.dto.response.CurrencyResponseV2;
+import org.knowm.xchange.kucoin.dto.response.KucoinCurrencyResponseV3;
 import org.knowm.xchange.kucoin.dto.response.KucoinKline;
 import org.knowm.xchange.kucoin.dto.response.OrderBookResponse;
 import org.knowm.xchange.kucoin.dto.response.SymbolResponse;
@@ -105,12 +107,11 @@ public class KucoinMarketDataServiceRaw extends KucoinBaseService {
   }
 
   public List<SymbolResponse> getKucoinSymbolsV2() throws IOException {
-    return classifyingExceptions(
-        () ->
-            decorateApiCall(symbolApi::getSymbolsV2)
-                .withRetry(retry("symbols"))
-                .withRateLimiter(rateLimiter(PUBLIC_REST_ENDPOINT_RATE_LIMITER))
-                .call());
+    return decorateApiCall(symbolApi::getSymbolsV2)
+        .withRetry(retry("symbols"))
+        .withRateLimiter(rateLimiter(PUBLIC_REST_ENDPOINT_RATE_LIMITER))
+        .call()
+        .getData();
   }
 
   public List<CurrenciesResponse> getKucoinCurrencies() throws IOException {
@@ -131,37 +132,46 @@ public class KucoinMarketDataServiceRaw extends KucoinBaseService {
                 .call());
   }
 
-  public OrderBookResponse getKucoinOrderBookPartial(CurrencyPair pair) throws IOException {
+  public List<KucoinCurrencyResponseV3> getAllKucoinCurrencies() throws IOException {
+    return decorateApiCall(symbolApi::getAllCurrencies)
+        .withRetry(retry("currencies"))
+        .withRateLimiter(rateLimiter(PUBLIC_REST_ENDPOINT_RATE_LIMITER))
+        .call()
+        .getData();
+  }
+
+  public OrderBookResponse getKucoinOrderBookPartial(Instrument instrument) throws IOException {
     return classifyingExceptions(
         () ->
             decorateApiCall(
                     () ->
                         orderBookApi.getPartOrderBookAggregated(
-                            KucoinAdapters.adaptCurrencyPair(pair)))
+                            KucoinAdapters.adaptCurrencyPair(instrument)))
                 .withRetry(retry("partialOrderBook"))
                 .withRateLimiter(rateLimiter(PUBLIC_REST_ENDPOINT_RATE_LIMITER))
                 .call());
   }
 
-  public OrderBookResponse getKucoinOrderBookPartialShallow(CurrencyPair pair) throws IOException {
+  public OrderBookResponse getKucoinOrderBookPartialShallow(Instrument instrument)
+      throws IOException {
     return classifyingExceptions(
         () ->
             decorateApiCall(
                     () ->
                         orderBookApi.getPartOrderBookShallowAggregated(
-                            KucoinAdapters.adaptCurrencyPair(pair)))
+                            KucoinAdapters.adaptCurrencyPair(instrument)))
                 .withRetry(retry("partialShallowOrderBook"))
                 .withRateLimiter(rateLimiter(PUBLIC_REST_ENDPOINT_RATE_LIMITER))
                 .call());
   }
 
-  public OrderBookResponse getKucoinOrderBookFull(CurrencyPair pair) throws IOException {
+  public OrderBookResponse getKucoinOrderBookFull(Instrument instrument) throws IOException {
     return classifyingExceptions(
         () ->
             decorateApiCall(
                     () ->
                         orderBookApi.getFullOrderBookAggregated(
-                            KucoinAdapters.adaptCurrencyPair(pair),
+                            KucoinAdapters.adaptCurrencyPair(instrument),
                             apiKey,
                             digest,
                             nonceFactory,

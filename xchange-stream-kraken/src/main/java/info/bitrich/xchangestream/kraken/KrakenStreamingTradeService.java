@@ -137,7 +137,7 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
                 .timestamp(dto.opentm == null ? null : new Date((long) (dto.opentm * 1000L)))
                 .fee(dto.fee)
                 .flags(adaptFlags(dto.oflags))
-                .userReference(dto.userref == null ? null : Integer.toString(dto.userref))
+                .userReference(resolveUserReference(dto.cl_ord_id, dto.userref))
                 .build());
       }
     }
@@ -213,16 +213,21 @@ public class KrakenStreamingTradeService implements StreamingTradeService {
                 .id(tradeId) // The tradeId should be the key of the map, postxid can be null and is
                 // not unique as required for a tradeId
                 .orderId(dto.ordertxid)
-                .currencyPair(currencyPair)
+                .instrument(currencyPair)
                 .timestamp(dto.time == null ? null : new Date((long) (dto.time * 1000L)))
                 .type(KrakenAdapters.adaptOrderType(KrakenType.fromString(dto.type)))
                 .price(dto.price)
                 .feeAmount(dto.fee)
-                .feeCurrency(currencyPair.counter)
+                .feeCurrency(currencyPair.getCounter())
                 .originalAmount(dto.vol)
+                .orderUserReference(resolveUserReference(dto.cl_ord_id, dto.userref))
                 .build());
       }
     }
     return result;
+  }
+
+  private static String resolveUserReference(String cl_ord_id, Integer userref) {
+    return cl_ord_id == null ? userref == null ? null : Integer.toString(userref) : cl_ord_id;
   }
 }

@@ -71,7 +71,7 @@ public class YoBitAdapters {
       Integer priceScale = value.getDecimal_places();
       currencyPairs.put(
           pair,
-          new InstrumentMetaData.Builder()
+          InstrumentMetaData.builder()
               .tradingFee(value.getFee())
               .minimumAmount(minSize)
               .priceScale(priceScale)
@@ -82,20 +82,20 @@ public class YoBitAdapters {
                   })
               .build());
 
-      if (!currencies.containsKey(pair.base)) {
-        CurrencyMetaData currencyMetaData = exchangeMetaData.getCurrencies().get(pair.base);
+      if (!currencies.containsKey(pair.getBase())) {
+        CurrencyMetaData currencyMetaData = exchangeMetaData.getCurrencies().get(pair.getBase());
         BigDecimal withdrawalFee =
             currencyMetaData == null ? null : currencyMetaData.getWithdrawalFee();
-        currencies.put(pair.base, new CurrencyMetaData(8, withdrawalFee));
+        currencies.put(pair.getBase(), new CurrencyMetaData(8, withdrawalFee));
       }
 
-      if (!currencies.containsKey(pair.counter)) {
-        CurrencyMetaData currencyMetaData = exchangeMetaData.getCurrencies().get(pair.counter);
+      if (!currencies.containsKey(pair.getCounter())) {
+        CurrencyMetaData currencyMetaData = exchangeMetaData.getCurrencies().get(pair.getCounter());
         CurrencyMetaData withdrawalFee =
             currencyMetaData == null
                 ? null
                 : new CurrencyMetaData(8, currencyMetaData.getWithdrawalFee());
-        currencies.put(pair.counter, withdrawalFee);
+        currencies.put(pair.getCounter(), withdrawalFee);
       }
     }
 
@@ -127,10 +127,10 @@ public class YoBitAdapters {
       OrderType type = trade.getType().equals("bid") ? OrderType.BID : OrderType.ASK;
 
       Trade t =
-          new Trade.Builder()
+          Trade.builder()
               .type(type)
               .originalAmount(trade.getAmount())
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(trade.getPrice())
               .timestamp(parseDate(trade.getTimestamp()))
               .id(String.valueOf(trade.getTid()))
@@ -169,9 +169,9 @@ public class YoBitAdapters {
   }
 
   public static String adaptCcyPairToUrlFormat(CurrencyPair currencyPair) {
-    return currencyPair.base.getCurrencyCode().toLowerCase()
+    return currencyPair.getBase().getCurrencyCode().toLowerCase()
         + "_"
-        + currencyPair.counter.getCurrencyCode().toLowerCase();
+        + currencyPair.getCounter().getCurrencyCode().toLowerCase();
   }
 
   public static OrderType adaptType(String type) {
@@ -247,7 +247,7 @@ public class YoBitAdapters {
     return UserTrade.builder()
         .type(adaptType(type))
         .originalAmount(new BigDecimal(amount))
-        .currencyPair(adaptCurrencyPair(pair))
+        .instrument(adaptCurrencyPair(pair))
         .price(new BigDecimal(rate))
         .timestamp(time)
         .id(id)

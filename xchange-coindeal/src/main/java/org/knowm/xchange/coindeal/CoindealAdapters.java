@@ -38,7 +38,7 @@ public final class CoindealAdapters {
                       ? Order.OrderType.BID
                       : Order.OrderType.ASK)
               .originalAmount(coindealTradeHistory.getQuantity())
-              .currencyPair(currencyPair)
+              .instrument(currencyPair)
               .price(coindealTradeHistory.getPrice())
               .timestamp(DateUtils.fromRfc3339DateString(coindealTradeHistory.getTimestamp()))
               .id(coindealTradeHistory.getId())
@@ -46,8 +46,8 @@ public final class CoindealAdapters {
               .feeAmount(coindealTradeHistory.getFee())
               .feeCurrency(
                   (coindealTradeHistory.getSide().equals("BUY")
-                      ? currencyPair.base
-                      : currencyPair.counter))
+                      ? currencyPair.getBase()
+                      : currencyPair.getCounter()))
               .build());
     }
 

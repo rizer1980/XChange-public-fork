@@ -5,6 +5,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.knowm.xchange.bybit.BybitAdapters.adaptLimitOrder;
+import static org.knowm.xchange.bybit.BybitAdapters.adaptMarketOrder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,25 +14,31 @@ import jakarta.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;
-import org.knowm.xchange.Exchange;
+import org.knowm.xchange.bybit.BybitAdapters;
+import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderResponse;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderStatus;
-import org.knowm.xchange.bybit.dto.trade.BybitSide;
 import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetail;
 import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetails;
 import org.knowm.xchange.bybit.dto.trade.details.linear.BybitLinearOrderDetail;
 import org.knowm.xchange.bybit.dto.trade.details.spot.BybitSpotOrderDetail;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
 
 public class BybitTradeServiceRawTest extends BaseWiremockTest {
 
   @Test
   public void testGetBybitLinearDetailOrder() throws IOException {
-    Exchange bybitExchange = createExchange();
-    BybitTradeServiceRaw bybitAccountServiceRaw = new BybitTradeServiceRaw(bybitExchange);
+    BybitExchange bybitExchange = createExchange();
+    BybitTradeServiceRaw bybitAccountServiceRaw =
+        new BybitTradeServiceRaw(bybitExchange, bybitExchange.getResilienceRegistries());
 
     String responseFilePath = "/getOrderDetailsLinear.json5";
     initGetStub("/v5/order/realtime", responseFilePath);
@@ -39,7 +47,7 @@ public class BybitTradeServiceRawTest extends BaseWiremockTest {
 
     BybitResult<BybitOrderDetails<BybitOrderDetail>> actualOrderDetails =
         bybitAccountServiceRaw.getBybitOrder(
-            BybitCategory.LINEAR, "fd4300ae-7847-404e-b947-b46980a4d140");
+            BybitCategory.LINEAR, null, "fd4300ae-7847-404e-b947-b46980a4d140");
 
     assertThat(actualOrderDetails.getResult().getList()).hasSize(1);
 
@@ -132,8 +140,9 @@ public class BybitTradeServiceRawTest extends BaseWiremockTest {
 
   @Test
   public void testGetBybitSpotDetailOrder() throws IOException {
-    Exchange bybitExchange = createExchange();
-    BybitTradeServiceRaw bybitAccountServiceRaw = new BybitTradeServiceRaw(bybitExchange);
+    BybitExchange bybitExchange = createExchange();
+    BybitTradeServiceRaw bybitAccountServiceRaw =
+        new BybitTradeServiceRaw(bybitExchange, bybitExchange.getResilienceRegistries());
 
     String responseFilePath = "/getOrderDetailsSpot.json5";
     initGetStub("/v5/order/realtime", responseFilePath);
@@ -142,7 +151,7 @@ public class BybitTradeServiceRawTest extends BaseWiremockTest {
 
     BybitResult<BybitOrderDetails<BybitOrderDetail>> actualOrderDetails =
         bybitAccountServiceRaw.getBybitOrder(
-            BybitCategory.SPOT, "fd4300ae-7847-404e-b947-b46980a4d140");
+            BybitCategory.SPOT, null, "fd4300ae-7847-404e-b947-b46980a4d140");
 
     assertThat(actualOrderDetails.getResult().getList()).hasSize(1);
 
@@ -224,8 +233,9 @@ public class BybitTradeServiceRawTest extends BaseWiremockTest {
 
   @Test
   public void testPlaceBybitMarketOrder() throws IOException {
-    Exchange bybitExchange = createExchange();
-    BybitTradeServiceRaw bybitAccountServiceRaw = new BybitTradeServiceRaw(bybitExchange);
+    BybitExchange bybitExchange = createExchange();
+    BybitTradeServiceRaw bybitAccountServiceRaw =
+        new BybitTradeServiceRaw(bybitExchange, bybitExchange.getResilienceRegistries());
 
     String orderPlacementResponse =
         "{\n"
@@ -247,9 +257,11 @@ public class BybitTradeServiceRawTest extends BaseWiremockTest {
                     .withHeader("Content-Type", "application/json")
                     .withBody(orderPlacementResponse)));
 
+    MarketOrder marketOrder =
+        new MarketOrder(OrderType.BID, BigDecimal.valueOf(0.1), new CurrencyPair("BTC/USDT"));
+    BybitCategory category = BybitAdapters.getCategory(marketOrder.getInstrument());
     BybitResult<BybitOrderResponse> order =
-        bybitAccountServiceRaw.placeMarketOrder(
-            BybitCategory.SPOT, "BTCUSDT", BybitSide.BUY, BigDecimal.valueOf(0.1), null);
+        bybitAccountServiceRaw.placeOrder(adaptMarketOrder(marketOrder, category), category);
 
     ObjectMapper mapper = new ObjectMapper();
     JsonNode responseObject = mapper.readTree(orderPlacementResponse);
@@ -267,8 +279,9 @@ public class BybitTradeServiceRawTest extends BaseWiremockTest {
 
   @Test
   public void testPlaceBybitLimitOrder() throws IOException {
-    Exchange bybitExchange = createExchange();
-    BybitTradeServiceRaw bybitAccountServiceRaw = new BybitTradeServiceRaw(bybitExchange);
+    BybitExchange bybitExchange = createExchange();
+    BybitTradeServiceRaw bybitAccountServiceRaw =
+        new BybitTradeServiceRaw(bybitExchange, bybitExchange.getResilienceRegistries());
 
     String orderPlacementResponse =
         "{\n"
@@ -290,14 +303,17 @@ public class BybitTradeServiceRawTest extends BaseWiremockTest {
                     .withHeader("Content-Type", "application/json")
                     .withBody(orderPlacementResponse)));
 
-    BybitResult<BybitOrderResponse> order =
-        bybitAccountServiceRaw.placeLimitOrder(
-            BybitCategory.SPOT,
-            "BTCUSDT",
-            BybitSide.BUY,
+    LimitOrder limitOrder =
+        new LimitOrder(
+            OrderType.BID,
             BigDecimal.valueOf(0.1),
-            BigDecimal.valueOf(1000),
-            null);
+            new CurrencyPair("BTC/USDT"),
+            "",
+            new Date(),
+            BigDecimal.valueOf(1000));
+    BybitCategory category = BybitAdapters.getCategory(limitOrder.getInstrument());
+    BybitResult<BybitOrderResponse> order =
+        bybitAccountServiceRaw.placeOrder(adaptLimitOrder(limitOrder, category), category);
 
     ObjectMapper mapper = new ObjectMapper();
     JsonNode responseObject = mapper.readTree(orderPlacementResponse);

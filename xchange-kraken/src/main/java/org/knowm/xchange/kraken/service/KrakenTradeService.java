@@ -2,6 +2,7 @@ package org.knowm.xchange.kraken.service;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -12,22 +13,24 @@ import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrades;
 import org.knowm.xchange.exceptions.ExchangeException;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.kraken.KrakenAdapters;
 import org.knowm.xchange.kraken.KrakenUtils;
 import org.knowm.xchange.kraken.dto.trade.KrakenOrder;
 import org.knowm.xchange.kraken.dto.trade.KrakenTrade;
 import org.knowm.xchange.service.trade.TradeService;
+import org.knowm.xchange.service.trade.params.CancelAllOrders;
 import org.knowm.xchange.service.trade.params.CancelOrderByIdParams;
 import org.knowm.xchange.service.trade.params.CancelOrderByUserReferenceParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
-import org.knowm.xchange.service.trade.params.DefaultTradeHistoryParamsTimeSpan;
+import org.knowm.xchange.service.trade.params.CurrencyPairParam;
+import org.knowm.xchange.service.trade.params.InstrumentParam;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamOffset;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsIdSpan;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
 import org.knowm.xchange.service.trade.params.orders.DefaultOpenOrdersParamCurrencyPair;
-import org.knowm.xchange.service.trade.params.orders.OpenOrdersParamCurrencyPair;
 import org.knowm.xchange.service.trade.params.orders.OpenOrdersParams;
 import org.knowm.xchange.service.trade.params.orders.OrderQueryParams;
 import org.knowm.xchange.utils.DateUtils;
@@ -51,13 +54,19 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
 
   @Override
   public OpenOrders getOpenOrders(OpenOrdersParams params) throws IOException {
-    Map<String, KrakenOrder> krakenOrders = super.getKrakenOpenOrders();
-    if (params != null && params instanceof OpenOrdersParamCurrencyPair) {
-      OpenOrdersParamCurrencyPair openOrdersParamCurrencyPair =
-          (OpenOrdersParamCurrencyPair) params;
+    Map<String, KrakenOrder> krakenOrders = getKrakenOpenOrders();
+    CurrencyPair currencyPair = null;
+    if (params instanceof CurrencyPairParam) {
+      currencyPair = ((CurrencyPairParam) params).getCurrencyPair();
+    }
+    if (params instanceof InstrumentParam) {
+      Instrument instrument = ((InstrumentParam) params).getInstrument();
+      currencyPair = new CurrencyPair(instrument.getBase(), instrument.getCounter());
+    }
+
+    if (currencyPair != null) {
       Map<String, KrakenOrder> filteredKrakenOrders =
-          KrakenUtils.filterOpenOrdersByCurrencyPair(
-              krakenOrders, openOrdersParamCurrencyPair.getCurrencyPair());
+          KrakenUtils.filterOpenOrdersByCurrencyPair(krakenOrders, currencyPair);
       return KrakenAdapters.adaptOpenOrders(filteredKrakenOrders);
     }
     return KrakenAdapters.adaptOpenOrders(krakenOrders);
@@ -95,6 +104,11 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
       return cancelOrder(((CancelOrderByUserReferenceParams) orderParams).getUserReference());
     }
     return false;
+  }
+
+  @Override
+  public Collection<String> cancelAllOrders(CancelAllOrders orderParams) throws IOException {
+    return Collections.singletonList(String.valueOf(super.cancelAllKrakenOrders().getCount()));
   }
 
   @Override
@@ -152,7 +166,7 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
   @Override
   public TradeHistoryParams createTradeHistoryParams() {
 
-    return new org.knowm.xchange.kraken.service.KrakenTradeHistoryParams();
+    return new KrakenTradeHistoryParams();
   }
 
   @Override
@@ -163,45 +177,5 @@ public class KrakenTradeService extends KrakenTradeServiceRaw implements TradeSe
   @Override
   public Collection<Order> getOrder(OrderQueryParams... orderQueryParams) throws IOException {
     return KrakenAdapters.adaptOrders(super.getOrders(TradeService.toOrderIds(orderQueryParams)));
-  }
-
-  @Deprecated
-  // Use org.knowm.xchange.kraken.service.KrakenTradeHistoryParams.java
-  public static class KrakenTradeHistoryParams extends DefaultTradeHistoryParamsTimeSpan
-      implements TradeHistoryParamOffset, TradeHistoryParamsIdSpan {
-
-    private Long offset;
-    private String startId;
-    private String endId;
-
-    @Override
-    public Long getOffset() {
-      return offset;
-    }
-
-    @Override
-    public void setOffset(Long offset) {
-      this.offset = offset;
-    }
-
-    @Override
-    public String getStartId() {
-      return startId;
-    }
-
-    @Override
-    public String getEndId() {
-      return endId;
-    }
-
-    @Override
-    public void setStartId(String startId) {
-      this.startId = startId;
-    }
-
-    @Override
-    public void setEndId(String endId) {
-      this.endId = endId;
-    }
   }
 }

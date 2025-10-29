@@ -1,6 +1,7 @@
 package info.bitrich.xchangestream.binance;
 
 import static info.bitrich.xchangestream.binance.BinanceSubscriptionType.KLINE;
+import static info.bitrich.xchangestream.binance.BinanceSubscriptionType.TICKER_WINDOW;
 import static info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper.getObjectMapper;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -9,14 +10,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import info.bitrich.xchangestream.binance.dto.BinanceRawTrade;
 import info.bitrich.xchangestream.binance.dto.BinanceWebsocketTransaction;
-import info.bitrich.xchangestream.binance.dto.BookTickerBinanceWebSocketTransaction;
-import info.bitrich.xchangestream.binance.dto.DepthBinanceWebSocketTransaction;
-import info.bitrich.xchangestream.binance.dto.FundingRateWebsocketTransaction;
-import info.bitrich.xchangestream.binance.dto.KlineBinanceWebSocketTransaction;
-import info.bitrich.xchangestream.binance.dto.TickerBinanceWebsocketTransaction;
-import info.bitrich.xchangestream.binance.dto.TradeBinanceWebsocketTransaction;
+import info.bitrich.xchangestream.binance.dto.market.BinanceRawTrade;
+import info.bitrich.xchangestream.binance.dto.market.BookTickerBinanceWebSocketTransaction;
+import info.bitrich.xchangestream.binance.dto.market.DepthBinanceWebSocketTransaction;
+import info.bitrich.xchangestream.binance.dto.market.FundingRateWebsocketTransaction;
+import info.bitrich.xchangestream.binance.dto.market.KlineBinanceWebSocketTransaction;
+import info.bitrich.xchangestream.binance.dto.market.TickerBinanceWebsocketTransaction;
+import info.bitrich.xchangestream.binance.dto.market.TradeBinanceWebsocketTransaction;
 import info.bitrich.xchangestream.binance.exceptions.UpFrontSubscriptionRequiredException;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
@@ -71,6 +72,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
       LoggerFactory.getLogger(BinanceStreamingMarketDataService.class);
 
   private static final JavaType TICKER_TYPE = getTickerType();
+  private static final JavaType WINDOW_TICKER_TYPE = getWindowTickerType();
   private static final JavaType BOOK_TICKER_TYPE = getBookTickerType();
   private static final JavaType TRADE_TYPE = getTradeType();
   private static final JavaType DEPTH_TYPE = getDepthType();
@@ -84,6 +86,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   private final int oderBookFetchLimitParameter;
 
   private final Map<Instrument, Observable<BinanceTicker24h>> tickerSubscriptions;
+  private final Map<Instrument, Observable<BinanceTicker24h>> rollingWindowTickerSubscriptions;
   private final Map<Instrument, Observable<BinanceBookTicker>> bookTickerSubscriptions;
   private final Map<Instrument, Observable<OrderBook>> orderbookSubscriptions;
   private final Map<Instrument, Observable<BinanceRawTrade>> tradeSubscriptions;
@@ -91,6 +94,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   private final Map<Instrument, Map<KlineInterval, Observable<BinanceKline>>> klineSubscriptions;
   private final Map<Instrument, Observable<DepthBinanceWebSocketTransaction>>
       orderBookRawUpdatesSubscriptions;
+  private Observable<List<BinanceTicker24h>> allRollingWindowTickerSubscriptions;
 
   /**
    * A scheduler for initialisation of binance order book snapshots, which is delegated to a
@@ -125,6 +129,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     this.marketDataService = marketDataService;
     this.onApiCall = onApiCall;
     this.tickerSubscriptions = new ConcurrentHashMap<>();
+    this.rollingWindowTickerSubscriptions = new ConcurrentHashMap<>();
     this.bookTickerSubscriptions = new ConcurrentHashMap<>();
     this.orderbookSubscriptions = new ConcurrentHashMap<>();
     this.tradeSubscriptions = new ConcurrentHashMap<>();
@@ -209,6 +214,41 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     }
     return tickerSubscriptions.computeIfAbsent(
         instrument, s -> triggerObservableBody(rawTickerStream(instrument)).share());
+  }
+
+  public Observable<BinanceTicker24h> rollingWindow(
+      Instrument instrument, KlineInterval windowSize) {
+    if (!service.isLiveSubscriptionEnabled()
+        && !service.getProductSubscription().getTicker().contains(instrument)) {
+      throw new UpFrontSubscriptionRequiredException();
+    }
+    if (windowSize.equals(KlineInterval.h1)
+        || windowSize.equals(KlineInterval.h4)
+        || windowSize.equals(KlineInterval.d1)) {
+      return rollingWindowTickerSubscriptions.computeIfAbsent(
+          instrument,
+          s -> triggerObservableBody(rollingWindowStream(instrument, windowSize)).share());
+    } else {
+      throw new UnsupportedOperationException("RollingWindow not supported for other window size!");
+    }
+  }
+
+  public Observable<List<BinanceTicker24h>> allRollingWindow(KlineInterval windowSize) {
+    if (!service.isLiveSubscriptionEnabled()) {
+      throw new UpFrontSubscriptionRequiredException();
+    }
+    if (windowSize.equals(KlineInterval.h1)
+        || windowSize.equals(KlineInterval.h4)
+        || windowSize.equals(KlineInterval.d1)) {
+      if (null != allRollingWindowTickerSubscriptions) {
+        return allRollingWindowTickerSubscriptions.share();
+      }
+      allRollingWindowTickerSubscriptions =
+          triggerObservableBody(allRollingWindowStream(windowSize)).share();
+      return allRollingWindowTickerSubscriptions;
+    } else {
+      throw new UnsupportedOperationException("RollingWindow not supported for other window size!");
+    }
   }
 
   public Observable<BinanceBookTicker> getRawBookTicker(Instrument instrument) {
@@ -371,6 +411,10 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     unsubscribe(instrument, KLINE, klineInterval);
   }
 
+  public void unsubscribeAllRollingWindow(KlineInterval klineInterval) {
+    unsubscribe(null, TICKER_WINDOW, klineInterval);
+  }
+
   private void unsubscribe(
       Instrument instrument,
       BinanceSubscriptionType subscriptionType,
@@ -396,6 +440,13 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
       case TICKER:
         tickerSubscriptions.remove(instrument);
         break;
+      case TICKER_WINDOW:
+        if (null == instrument) {
+          allRollingWindowTickerSubscriptions = null;
+        } else {
+          rollingWindowTickerSubscriptions.remove(instrument);
+        }
+        break;
       case BOOK_TICKER:
         bookTickerSubscriptions.remove(instrument);
         break;
@@ -406,6 +457,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
               intervalMap.remove(klineInterval);
               return intervalMap;
             });
+        break;
       default:
         throw new IllegalArgumentException(
             "Subscription type not supported to unsubscribe from stream");
@@ -416,6 +468,9 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
       Instrument instrument,
       BinanceSubscriptionType subscriptionType,
       KlineInterval klineInterval) {
+    if (instrument == null && subscriptionType == TICKER_WINDOW) {
+      return "!" + subscriptionType.getType() + klineInterval.code() + "@arr";
+    }
     return getChannelPrefix(instrument)
         + "@"
         + subscriptionType.getType()
@@ -453,6 +508,42 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                         transaction.getData().getSymbol(), instrument instanceof FuturesContract)
                     .equals(instrument))
         .map(transaction -> transaction.getData().getTicker());
+  }
+
+  private Observable<BinanceTicker24h> rollingWindowStream(
+      Instrument instrument, KlineInterval windowSize) {
+    return this.service
+        .subscribeChannel(
+            this.getChannelPrefix(instrument)
+                + "@"
+                + BinanceSubscriptionType.TICKER_WINDOW.getType()
+                + windowSize.code(),
+            new Object[0])
+        .map(
+            (it) ->
+                this.<TickerBinanceWebsocketTransaction>readTransaction(it, TICKER_TYPE, "ticker"))
+        .filter(
+            transaction ->
+                BinanceAdapters.adaptSymbol(
+                        transaction.getData().getSymbol(), instrument instanceof FuturesContract)
+                    .equals(instrument))
+        .map(transaction -> transaction.getData().getTicker());
+  }
+
+  private Observable<List<BinanceTicker24h>> allRollingWindowStream(KlineInterval windowSize) {
+    return this.service
+        .subscribeChannel(
+            "!" + BinanceSubscriptionType.TICKER_WINDOW.getType() + windowSize.code() + "@arr",
+            new Object[0])
+        .map(
+            (it) ->
+                this.<List<TickerBinanceWebsocketTransaction>>readTransaction(
+                    it, WINDOW_TICKER_TYPE, "ticker"))
+        .map(
+            transaction ->
+                transaction.getData().stream()
+                    .map(TickerBinanceWebsocketTransaction::getTicker)
+                    .collect(Collectors.toList()));
   }
 
   private Observable<BinanceBookTicker> rawBookTickerStream(Instrument instrument) {
@@ -692,6 +783,14 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         .getTypeFactory()
         .constructType(
             new TypeReference<BinanceWebsocketTransaction<TickerBinanceWebsocketTransaction>>() {});
+  }
+
+  private static JavaType getWindowTickerType() {
+    return getObjectMapper()
+        .getTypeFactory()
+        .constructType(
+            new TypeReference<
+                BinanceWebsocketTransaction<List<TickerBinanceWebsocketTransaction>>>() {});
   }
 
   private static JavaType getBookTickerType() {

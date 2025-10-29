@@ -2,14 +2,21 @@ package org.knowm.xchange.bybit;
 
 import static org.knowm.xchange.bybit.dto.BybitCategory.INVERSE;
 import static org.knowm.xchange.bybit.dto.BybitCategory.OPTION;
+import static org.knowm.xchange.bybit.dto.marketdata.instruments.option.BybitOptionInstrumentInfo.OptionType.CALL;
+import static org.knowm.xchange.bybit.dto.trade.details.BybitHedgeMode.TWOWAY;
 
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinBalance;
@@ -18,21 +25,26 @@ import org.knowm.xchange.bybit.dto.account.walletbalance.BybitCoinWalletBalance;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.linear.BybitLinearInverseInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.option.BybitOptionInstrumentInfo;
-import org.knowm.xchange.bybit.dto.marketdata.instruments.option.BybitOptionInstrumentInfo.OptionType;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.spot.BybitSpotInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.option.BybitOptionTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.spot.BybitSpotTicker;
+import org.knowm.xchange.bybit.dto.trade.BybitAmendOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitOrderStatus;
+import org.knowm.xchange.bybit.dto.trade.BybitOrderType;
+import org.knowm.xchange.bybit.dto.trade.BybitPlaceOrderPayload;
 import org.knowm.xchange.bybit.dto.trade.BybitSide;
+import org.knowm.xchange.bybit.dto.trade.details.BybitHedgeMode;
 import org.knowm.xchange.bybit.dto.trade.details.BybitOrderDetail;
+import org.knowm.xchange.bybit.dto.trade.details.BybitTimeInForce;
 import org.knowm.xchange.bybit.service.BybitException;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
 import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.Order.IOrderFlags;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Balance;
@@ -48,18 +60,23 @@ import org.knowm.xchange.instrument.Instrument;
 public class BybitAdapters {
 
   private static final ThreadLocal<SimpleDateFormat> OPTION_DATE_FORMAT =
-      ThreadLocal.withInitial(() -> new SimpleDateFormat("ddMMMyy"));
+      ThreadLocal.withInitial(() -> new SimpleDateFormat("ddMMMyy", Locale.US));
   public static final List<String> QUOTE_CURRENCIES =
-      Arrays.asList("USDT", "USDC", "EUR", "BTC", "ETH", "DAI", "BRZ");
+      Arrays.asList(
+          "USDT", "USDC", "USDE", "EUR", "BRL", "PLN", "TRY", "SOL", "BTC", "ETH", "DAI", "BRZ");
 
   public static Wallet adaptBybitBalances(List<BybitCoinWalletBalance> coinWalletBalances) {
     List<Balance> balances = new ArrayList<>(coinWalletBalances.size());
     for (BybitCoinWalletBalance bybitCoinBalance : coinWalletBalances) {
+      BigDecimal availableToWithdraw =
+          bybitCoinBalance.getAvailableToWithdraw().isEmpty()
+              ? BigDecimal.ZERO
+              : new BigDecimal(bybitCoinBalance.getAvailableToWithdraw());
       balances.add(
           new Balance(
               new Currency(bybitCoinBalance.getCoin()),
               new BigDecimal(bybitCoinBalance.getEquity()),
-              new BigDecimal(bybitCoinBalance.getAvailableToWithdraw())));
+              availableToWithdraw));
     }
     return Wallet.Builder.from(balances).build();
   }
@@ -77,10 +94,10 @@ public class BybitAdapters {
   }
 
   public static BybitSide getSideString(Order.OrderType type) {
-    if (type == Order.OrderType.ASK) {
+    if (type == Order.OrderType.ASK || type == OrderType.EXIT_BID) {
       return BybitSide.SELL;
     }
-    if (type == Order.OrderType.BID) {
+    if (type == Order.OrderType.BID || type == OrderType.EXIT_ASK) {
       return BybitSide.BUY;
     }
     throw new IllegalArgumentException("invalid order type");
@@ -116,9 +133,14 @@ public class BybitAdapters {
             && instrument.getCounter().getSymbol().equals("USDC")) {
           // eg. contractType: LINEAR_PERPETUAL, symbol: ETHPERP, base: ETH, quote: USDC
           return String.format("%sPERP", instrument.getBase());
-        } else {
-          // eg. contractType: LINEAR_FUTURES, symbol: ETH-02FEB24, base: ETH, quote: USDC
-          return String.format("%s-%s", instrument.getBase(), futuresContract.getPrompt());
+        } else { // USDT FUTURES, symbol: ETH-USDT-02FEB24, base: ETH, quote: USDT
+          if (instrument.getCounter().getSymbol().equals("USDT")) {
+            return String.format("%sUSDT-%s", instrument.getBase(), futuresContract.getPrompt());
+          }
+          // eg. contractType: USDC FUTURES, symbol: ETH-02FEB24, base: ETH, quote: USDC
+          else {
+            return String.format("%s-%s", instrument.getBase(), futuresContract.getPrompt());
+          }
         }
       case INVERSE:
         futuresContract = (FuturesContract) instrument;
@@ -144,6 +166,7 @@ public class BybitAdapters {
   }
 
   public static CurrencyPair guessSymbol(String symbol) {
+    // SPOT Only
     for (String quoteCurrency : QUOTE_CURRENCIES) {
       if (symbol.endsWith(quoteCurrency)) {
         int splitIndex = symbol.lastIndexOf(quoteCurrency);
@@ -152,27 +175,6 @@ public class BybitAdapters {
     }
     int splitIndex = symbol.length() - 3;
     return new CurrencyPair(symbol.substring(0, splitIndex), symbol.substring(splitIndex));
-  }
-
-  public static Instrument guessSymbol(String symbol, BybitCategory category) {
-    switch (category) {
-      case SPOT:
-        {
-          return guessSymbol(symbol);
-        }
-      case LINEAR:
-        {
-          if (symbol.endsWith("USDT")) {
-            int splitIndex = symbol.lastIndexOf("USDT");
-            return new FuturesContract(
-                (symbol.substring(0, splitIndex) + "/" + symbol.substring(splitIndex) + "/PERP"));
-          } else if (symbol.endsWith("PERP")) {
-            int splitIndex = symbol.lastIndexOf("PERP");
-            return new FuturesContract((symbol.substring(0, splitIndex) + "/" + "USDC/PERP"));
-          }
-        }
-    }
-    return null;
   }
 
   public static Instrument adaptInstrumentInfo(BybitInstrumentInfo instrumentInfo) {
@@ -198,7 +200,7 @@ public class BybitAdapters {
             .expireDate(OPTION_DATE_FORMAT.get().parse(expireDateString))
             .strike(strike)
             .type(
-                optionInstrumentInfo.getOptionsType().equals(OptionType.CALL)
+                optionInstrumentInfo.getOptionsType().equals(CALL)
                     ? OptionsContract.OptionType.CALL
                     : OptionsContract.OptionType.PUT)
             .build();
@@ -213,7 +215,7 @@ public class BybitAdapters {
 
   public static InstrumentMetaData symbolToCurrencyPairMetaData(
       BybitSpotInstrumentInfo instrumentInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .marketOrderEnabled(true)
         .minimumAmount(instrumentInfo.getLotSizeFilter().getMinOrderQty())
         .maximumAmount(instrumentInfo.getLotSizeFilter().getMaxOrderQty())
@@ -228,7 +230,7 @@ public class BybitAdapters {
 
   public static InstrumentMetaData symbolToCurrencyPairMetaData(
       BybitLinearInverseInstrumentInfo instrumentInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .marketOrderEnabled(true)
         .minimumAmount(instrumentInfo.getLotSizeFilter().getMinOrderQty())
         .maximumAmount(instrumentInfo.getLotSizeFilter().getMaxOrderQty())
@@ -237,12 +239,13 @@ public class BybitAdapters {
         .tradingFee(instrumentInfo.getDeliveryFeeRate())
         .volumeScale(instrumentInfo.getLotSizeFilter().getQtyStep().scale())
         .amountStepSize(instrumentInfo.getLotSizeFilter().getQtyStep())
+        .counterMinimumAmount(instrumentInfo.getLotSizeFilter().getMinNotionalValue())
         .build();
   }
 
   public static InstrumentMetaData symbolToCurrencyPairMetaData(
       BybitOptionInstrumentInfo instrumentInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .marketOrderEnabled(true)
         .minimumAmount(instrumentInfo.getLotSizeFilter().getMinOrderQty())
         .maximumAmount(instrumentInfo.getLotSizeFilter().getMaxOrderQty())
@@ -252,19 +255,22 @@ public class BybitAdapters {
         .build();
   }
 
-  public static Order adaptBybitOrderDetails(BybitOrderDetail bybitOrderResult) {
+  public static Order adaptBybitOrderDetails(
+      BybitOrderDetail bybitOrderResult, BybitCategory category) {
     Order.Builder builder;
 
     switch (bybitOrderResult.getOrderType()) {
       case MARKET:
         builder =
             new MarketOrder.Builder(
-                adaptOrderType(bybitOrderResult), guessSymbol(bybitOrderResult.getSymbol()));
+                adaptOrderType(bybitOrderResult),
+                convertBybitSymbolToInstrument(bybitOrderResult.getSymbol(), category));
         break;
       case LIMIT:
         builder =
             new LimitOrder.Builder(
-                    adaptOrderType(bybitOrderResult), guessSymbol(bybitOrderResult.getSymbol()))
+                    adaptOrderType(bybitOrderResult),
+                    convertBybitSymbolToInstrument(bybitOrderResult.getSymbol(), category))
                 .limitPrice(bybitOrderResult.getPrice());
         break;
       default:
@@ -412,9 +418,15 @@ public class BybitAdapters {
             return new FuturesContract(
                 new CurrencyPair(symbol.substring(0, splitIndex), "USDC"), "PERP");
           }
-          // USDC Futures
+          // USDT & USDC Futures
           int splitIndex = symbol.lastIndexOf("-");
-          return new FuturesContract(
+          if (symbol.contains("USDT")) // USDT
+          {
+            return new FuturesContract(
+                new CurrencyPair(symbol.substring(0, splitIndex - 4), "USDT"),
+                symbol.substring(splitIndex + 1));
+          }
+          return new FuturesContract( // USDC
               new CurrencyPair(symbol.substring(0, splitIndex), "USDC"),
               symbol.substring(splitIndex + 1));
         }
@@ -427,8 +439,134 @@ public class BybitAdapters {
         }
       case OPTION:
         {
+          DateTimeFormatter dateParser =
+              new DateTimeFormatterBuilder()
+                  .parseCaseInsensitive()
+                  .appendPattern("ddLLLyy")
+                  .toFormatter(Locale.US);
+          DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyMMdd");
+          String[] tokens = symbol.split("-");
+          String base = tokens[0];
+          String quote = "USDC";
+          String date = dateFormat.format(LocalDate.parse(tokens[1], dateParser));
+          BigDecimal strike = new BigDecimal(tokens[2]);
+          return new OptionsContract(
+              base + "/" + quote + "/" + date + "/" + strike + "/" + tokens[3]);
         }
     }
     return null;
+  }
+
+  public static BybitPlaceOrderPayload adaptMarketOrder(
+      MarketOrder marketOrder, BybitCategory category) {
+    int positionIdx = getPositionIdx(marketOrder);
+    boolean reduceOnly =
+        marketOrder.getType().equals(OrderType.EXIT_ASK)
+            || marketOrder.getType().equals(OrderType.EXIT_BID);
+    BybitPlaceOrderPayload payload =
+        new BybitPlaceOrderPayload(
+            category,
+            convertToBybitSymbol(marketOrder.getInstrument()),
+            BybitAdapters.getSideString(marketOrder.getType()),
+            BybitOrderType.MARKET,
+            marketOrder.getOriginalAmount(),
+            marketOrder.getUserReference(),
+            positionIdx,
+            null);
+
+    if (reduceOnly) {
+      payload.setReduceOnly("true");
+    }
+    payload.setTimeInForce(BybitTimeInForce.IOC.getValue());
+    return payload;
+  }
+
+  public static BybitPlaceOrderPayload adaptLimitOrder(
+      LimitOrder limitOrder, BybitCategory category) {
+    BybitTimeInForce timeInForce =
+        getOrderFlag(limitOrder, BybitTimeInForce.class).orElse(BybitTimeInForce.GTC);
+    int positionIdx = BybitAdapters.getPositionIdx(limitOrder);
+    boolean reduceOnly =
+        limitOrder.getType().equals(OrderType.EXIT_ASK)
+            || limitOrder.getType().equals(OrderType.EXIT_BID);
+    BybitPlaceOrderPayload payload =
+        new BybitPlaceOrderPayload(
+            category,
+            convertToBybitSymbol(limitOrder.getInstrument()),
+            BybitAdapters.getSideString(limitOrder.getType()),
+            BybitOrderType.LIMIT,
+            limitOrder.getOriginalAmount(),
+            limitOrder.getUserReference(),
+            positionIdx,
+            limitOrder.getLimitPrice());
+    // stopLoss, slTriggerBy, slLimitPrice and slOrderType - not realized yet
+    //    if (stopLoss != null && slTriggerBy != null && slLimitPrice != null && slOrderType !=
+    // null) {
+    //      payload.setStopLoss(stopLoss.toString());
+    //      payload.setSlTriggerBy(slTriggerBy.getValue());
+    //      payload.setSlLimitPrice(slLimitPrice.toString());
+    //      payload.setSlOrderType(slOrderType.getValue());
+    //      if (slOrderType.equals(MARKET)) {
+    //        payload.setTpslMode(FULL.getValue());
+    //      } else {
+    //        payload.setTpslMode(PARTIAL.getValue());
+    //      }
+    //    }
+    if (reduceOnly) {
+      payload.setReduceOnly("true");
+    }
+    payload.setTimeInForce(timeInForce.getValue());
+    return payload;
+  }
+
+  public static int getPositionIdx(Order order) {
+    BybitHedgeMode hedgeMode =
+        getOrderFlag(order, BybitHedgeMode.class).orElse(BybitHedgeMode.ONEWAY);
+    int positionIdx = 0;
+    if (hedgeMode.equals(TWOWAY)) {
+      positionIdx = 1;
+      switch (order.getType()) {
+        case ASK:
+        case EXIT_ASK:
+          {
+            positionIdx = 2;
+            break;
+          }
+        case BID:
+        case EXIT_BID:
+          {
+            break;
+          }
+      }
+    }
+    return positionIdx;
+  }
+
+  public static <T extends IOrderFlags> Optional<T> getOrderFlag(Order order, Class<T> clazz) {
+    return (Optional<T>)
+        order.getOrderFlags().stream()
+            .filter(flag -> clazz.isAssignableFrom(flag.getClass()))
+            .findFirst();
+  }
+
+  public static BybitAmendOrderPayload adaptChangeOrder(LimitOrder order, BybitCategory category) {
+    return new BybitAmendOrderPayload(
+        category,
+        convertToBybitSymbol(order.getInstrument()),
+        order.getId(),
+        order.getUserReference(),
+        null,
+        // conditional
+        order.getOriginalAmount() == null ? null : order.getOriginalAmount().toPlainString(),
+        // conditional
+        order.getLimitPrice() == null ? null : order.getLimitPrice().toPlainString(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 }

@@ -206,17 +206,17 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
                       if (o.getSide() == Side.buy) { // the same side as the order!
                         amount = t.getSize();
-                        feeCurrency = p.base;
+                        feeCurrency = p.getBase();
                       } else { // order and trade (transaction) have different sides!
                         amount =
                             stripTrailingZeros(
                                 t.getSize().divide(t.getPrice(), 16, RoundingMode.HALF_UP));
-                        feeCurrency = p.counter;
+                        feeCurrency = p.getCounter();
                       }
 
                       UserTrade ut =
                           UserTrade.builder()
-                              .currencyPair(p)
+                              .instrument(p)
                               .id(t.getLedgerId())
                               .orderId(o.getOrderId())
                               .originalAmount(amount)
@@ -286,17 +286,17 @@ public class OkexTradeService extends OkexTradeServiceRaw implements TradeServic
 
                       if (o.getSide() == Side.buy) { // the same side as the order!
                         amount = t.getSize();
-                        feeCurrency = p.base;
+                        feeCurrency = p.getBase();
                       } else { // order and trade (transaction) have different sides!
                         amount =
                             stripTrailingZeros(
                                 t.getSize().divide(t.getPrice(), 16, RoundingMode.HALF_UP));
-                        feeCurrency = p.counter;
+                        feeCurrency = p.getCounter();
                       }
 
                       UserTrade ut =
                           UserTrade.builder()
-                              .currencyPair(p)
+                              .instrument(p)
                               .id(t.getLedgerId())
                               .orderId(o.getOrderId())
                               .originalAmount(amount)

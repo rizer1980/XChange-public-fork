@@ -1,9 +1,11 @@
 package org.knowm.xchange.coinex;
 
+import java.math.BigDecimal;
 import java.math.MathContext;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +14,7 @@ import lombok.experimental.UtilityClass;
 import org.knowm.xchange.coinex.dto.account.CoinexBalanceInfo;
 import org.knowm.xchange.coinex.dto.account.CoinexMarketType;
 import org.knowm.xchange.coinex.dto.account.CoinexOrder;
+import org.knowm.xchange.coinex.dto.account.CoinexOrder.CoinexOrderType;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexCurrencyPairInfo;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexMarketDepth;
 import org.knowm.xchange.coinex.dto.marketdata.CoinexTickerV1;
@@ -26,6 +29,7 @@ import org.knowm.xchange.dto.marketdata.Ticker.Builder;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.instrument.Instrument;
 
 @UtilityClass
@@ -58,10 +62,41 @@ public class CoinexAdapters {
         .currencyPair((CurrencyPair) marketOrder.getInstrument())
         .marketType(CoinexMarketType.SPOT)
         .side(marketOrder.getType())
-        .type("market")
+        .type(CoinexOrderType.MARKET)
         .clientId(marketOrder.getUserReference())
         .amount(marketOrder.getOriginalAmount())
         .build();
+  }
+
+  public CoinexOrder toCoinexOrder(LimitOrder limitOrder) {
+    return CoinexOrder.builder()
+        .currencyPair((CurrencyPair) limitOrder.getInstrument())
+        .marketType(CoinexMarketType.SPOT)
+        .side(limitOrder.getType())
+        .type(CoinexOrderType.LIMIT)
+        .price(limitOrder.getLimitPrice())
+        .clientId(limitOrder.getUserReference())
+        .amount(limitOrder.getOriginalAmount())
+        .build();
+  }
+
+  public CoinexOrder toCoinexOrder(StopOrder stopOrder) {
+    CoinexOrder.CoinexOrderBuilder builder =
+        CoinexOrder.builder()
+            .currencyPair((CurrencyPair) stopOrder.getInstrument())
+            .marketType(CoinexMarketType.SPOT)
+            .side(stopOrder.getType())
+            .triggerPrice(stopOrder.getStopPrice())
+            .clientId(stopOrder.getUserReference())
+            .amount(stopOrder.getOriginalAmount());
+
+    if (stopOrder.getLimitPrice() != null) {
+      builder.type(CoinexOrderType.LIMIT).price(stopOrder.getLimitPrice());
+    } else {
+      builder.type(CoinexOrderType.MARKET);
+    }
+
+    return builder.build();
   }
 
   public CurrencyPair toCurrencyPair(String symbol) {
@@ -69,11 +104,15 @@ public class CoinexAdapters {
   }
 
   public InstrumentMetaData toInstrumentMetaData(CoinexCurrencyPairInfo coinexCurrencyPairInfo) {
-    return new InstrumentMetaData.Builder()
+    return InstrumentMetaData.builder()
         .tradingFee(coinexCurrencyPairInfo.getTakerFeeRate())
         .minimumAmount(coinexCurrencyPairInfo.getMinAssetAmount())
         .volumeScale(coinexCurrencyPairInfo.getBaseCurrencyPrecision())
         .priceScale(coinexCurrencyPairInfo.getQuoteCurrencyPrecision())
+        .amountStepSize(
+            BigDecimal.ONE.movePointLeft(coinexCurrencyPairInfo.getBaseCurrencyPrecision()))
+        .priceStepSize(
+            BigDecimal.ONE.movePointLeft(coinexCurrencyPairInfo.getQuoteCurrencyPrecision()))
         .build();
   }
 
@@ -83,10 +122,10 @@ public class CoinexAdapters {
     OrderType orderType = coinexOrder.getSide();
 
     switch (coinexOrder.getType()) {
-      case "market":
+      case MARKET:
         builder = new MarketOrder.Builder(orderType, instrument);
         break;
-      case "limit":
+      case LIMIT:
         builder = new LimitOrder.Builder(orderType, instrument).limitPrice(coinexOrder.getPrice());
         break;
       default:
@@ -191,6 +230,30 @@ public class CoinexAdapters {
     List<Balance> balances =
         coinexBalanceInfos.stream().map(CoinexAdapters::toBalance).collect(Collectors.toList());
 
-    return Wallet.Builder.from(balances).id("spot").build();
+    return Wallet.Builder.from(balances)
+        .id("spot")
+        .features(EnumSet.of(Wallet.WalletFeature.TRADING))
+        .build();
+  }
+
+  public String toString(OrderType orderType) {
+    if (orderType == null) {
+      return null;
+    }
+    switch (orderType) {
+      case BID:
+        return "buy";
+      case ASK:
+        return "sell";
+      default:
+        throw new IllegalArgumentException("Can't map " + orderType);
+    }
+  }
+
+  public String toString(CoinexMarketType coinexMarketType) {
+    if (coinexMarketType == null) {
+      return null;
+    }
+    return coinexMarketType.toString();
   }
 }
