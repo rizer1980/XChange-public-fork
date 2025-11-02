@@ -4,25 +4,13 @@ import info.bitrich.xchangestream.service.ConnectableService;
 import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.*;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
-import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty.handler.logging.LogLevel;
@@ -41,6 +29,10 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.ObservableEmitter;
 import io.reactivex.rxjava3.subjects.PublishSubject;
 import io.reactivex.rxjava3.subjects.Subject;
+import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -53,9 +45,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import lombok.Getter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public abstract class NettyStreamingService<T> extends ConnectableService {
 
@@ -90,7 +79,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
   private final Duration retryDuration;
   private final Duration connectionTimeout;
   private final int idleTimeoutSeconds;
-  private volatile NioEventLoopGroup eventLoopGroup;
+  private volatile EpollEventLoopGroup eventLoopGroup;
   protected final Map<String, Subscription> channels = new ConcurrentHashMap<>();
   private boolean compressedMessages = false;
 
@@ -197,7 +186,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                         this::messageHandler);
 
                 if (eventLoopGroup == null || eventLoopGroup.isShutdown()) {
-                  eventLoopGroup = new NioEventLoopGroup(2);
+                  eventLoopGroup = new EpollEventLoopGroup(2);
                 }
 
                 Bootstrap bootstrap =
@@ -206,16 +195,16 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                         .option(
                             ChannelOption.CONNECT_TIMEOUT_MILLIS,
                             Math.toIntExact(connectionTimeout.toMillis()))
-                        .option(ChannelOption.SO_KEEPALIVE, true)
-                        .channel(NioSocketChannel.class);
+//                        .option(ChannelOption.SO_KEEPALIVE, true)
+                        .channel(EpollSocketChannel.class);
                 if (socksProxyHost != null) {
                   bootstrap.disableResolver();
                 }
                 bootstrap
-                    .handler(
-                        new ChannelInitializer<SocketChannel>() {
+                        .handler(
+                        new ChannelInitializer<EpollSocketChannel>() {
                           @Override
-                          protected void initChannel(SocketChannel ch) {
+                          protected void initChannel(EpollSocketChannel ch) {
                             ChannelPipeline p = ch.pipeline();
                             if (socksProxyHost != null) {
                               p.addLast(
