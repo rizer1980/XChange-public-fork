@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
@@ -62,7 +63,7 @@ public class OkexPrivateStreamingService extends JsonNettyStreamingService {
       String privateApiUrl,
       ExchangeSpecification exchangeSpecification,
       OkexExchange okexExchange) {
-    super(privateApiUrl);
+      super(privateApiUrl,65536, Duration.ofSeconds(1), Duration.ofMillis(500), 15);
     this.exchangeSpecification = exchangeSpecification;
     this.okexExchange = okexExchange;
   }
