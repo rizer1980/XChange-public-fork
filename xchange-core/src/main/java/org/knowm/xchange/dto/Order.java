@@ -24,7 +24,7 @@ import org.knowm.xchange.instrument.Instrument;
   @JsonSubTypes.Type(value = StopOrder.class, name = "stop"),
   @JsonSubTypes.Type(value = MarketOrder.class, name = "market")
 })
-public abstract class Order implements Serializable {
+public class Order implements Serializable {
 
   private static final long serialVersionUID = -8132103343647993249L;
 
