@@ -1,8 +1,5 @@
 package org.knowm.xchange.binance;
 
-import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
-
-import java.util.Map;
 import org.apache.commons.lang3.ObjectUtils;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.Exchange;
@@ -19,6 +16,10 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.utils.AuthUtils;
 import si.mazi.rescu.SynchronizedValueFactory;
+
+import java.util.Map;
+
+import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
 
 public class BinanceExchange extends BaseExchange implements Exchange {
 
@@ -94,6 +95,11 @@ public class BinanceExchange extends BaseExchange implements Exchange {
     return ExchangeType.FUTURES.equals(
         exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE));
   }
+
+    public boolean isSpotEnabled() {
+        return ExchangeType.SPOT.equals(
+                exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE));
+    }
 
   public boolean isPortfolioMarginEnabled() {
     return ExchangeType.PORTFOLIO_MARGIN.equals(
