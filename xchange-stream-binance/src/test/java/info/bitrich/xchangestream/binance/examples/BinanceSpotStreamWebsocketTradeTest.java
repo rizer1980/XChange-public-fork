@@ -92,16 +92,16 @@ public class BinanceSpotStreamWebsocketTradeTest {
                                 },
                                 throwable -> LOG.error("placeLimitOrder error", throwable));
         Thread.sleep(1000);
-
+        BinanceCancelOrderParams cancelOrderParams = new BinanceCancelOrderParams(instrument2, null, limitOrderUserId);
         LimitOrder changeOrder =
                 new LimitOrder.Builder(Order.OrderType.BID, instrument2)
                         .originalAmount(minAmount)
-                        .limitPrice(ticker.getLow().add(BigDecimal.ONE.negate()))
+                        .limitPrice(ticker.getLow().add(BigDecimal.ONE))
                         .userReference(limitOrderUserId)
                         .build();
         Disposable changeOrderDisposable =
                 binanceStreamingTradeService
-                        .changeOrder(changeOrder)
+                        .changeOrder(changeOrder,cancelOrderParams)
                         .subscribe(
                                 result -> {
                                     if (logOutput) {
@@ -114,7 +114,7 @@ public class BinanceSpotStreamWebsocketTradeTest {
 
         Disposable cancelOrderDisposable =
                 binanceStreamingTradeService
-                        .cancelOrder(new BinanceCancelOrderParams(instrument2, null, limitOrderUserId))
+                        .cancelOrder(cancelOrderParams)
                         .subscribe(
                                 result -> {
                                     if (logOutput) {

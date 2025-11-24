@@ -5,11 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransaction.BinanceWebSocketTypes;
 import info.bitrich.xchangestream.binance.dto.account.AccountUpdateBinanceWebSocketTransaction;
-import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderResponse;
-import info.bitrich.xchangestream.binance.dto.trade.ExecutionReportBinanceUserTransaction;
+import info.bitrich.xchangestream.binance.dto.trade.*;
 import info.bitrich.xchangestream.binance.dto.trade.ExecutionReportBinanceUserTransaction.ExecutionType;
-import info.bitrich.xchangestream.binance.dto.trade.OrderTradeUpdateBinanceWebSocketTransaction;
-import info.bitrich.xchangestream.binance.dto.trade.TradeLiteBinanceWebsocketTransaction;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.github.resilience4j.rxjava3.ratelimiter.operator.RateLimiterOperator;
@@ -247,10 +244,24 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
                                 });
     }
 
-    public Single<Integer> changeOrder(LimitOrder limitOrder) {
+    public Single<Integer> changeOrder(LimitOrder limitOrder,CancelOrderParams... orderParams) {
     if (binanceUserTradeStreamingService.isAuthorized()) {
       if (exchange.isFuturesEnabled()) {
-          return changeOrderInternal(limitOrder)
+          return binanceUserTradeStreamingService
+                  .subscribeChannel(String.valueOf(System.nanoTime()), "order.modify", limitOrder)
+                  .flatMap(
+                          node -> {
+                              TypeReference<BinanceWebsocketOrderResponse<BinanceNewOrder>> typeReference =
+                                      new TypeReference<>() {};
+                              BinanceWebsocketOrderResponse<BinanceNewOrder> response =
+                                      mapper.treeToValue(node, typeReference);
+                              if (response.getStatus() == 200) {
+                                  return Observable.just(0);
+                              } else {
+                                  assert response.getError() != null;
+                                  return Observable.just(response.getError().getCode());
+                              }
+                          })
             .firstOrError()
             .compose(
                 RateLimiterOperator.of(
@@ -263,8 +274,33 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
                         .rateLimiters()
                         .rateLimiter(ORDERS_PER_MINUTE_RATE_LIMITER)));
       } else if(exchange.isSpotEnabled()) {
-          return changeOrderInternal(limitOrder)
+          // Cancel an existing order and immediately place a new order instead of the canceled one.
+          return binanceUserTradeStreamingService
+                  .subscribeChannel(String.valueOf(System.nanoTime()), "order.cancelReplace", limitOrder,orderParams[0])
+                  .flatMap(
+                          node -> {
+                              TypeReference<BinanceWebsocketOrderResponse<BinanceWebsocketOrderCancelAndReplaceResponse>> typeReference =
+                                      new TypeReference<>() {};
+                              BinanceWebsocketOrderResponse<BinanceWebsocketOrderCancelAndReplaceResponse> response =
+                                      mapper.treeToValue(node, typeReference);
+                              if (response.getStatus() == 200) {
+                                  return Observable.just(0);
+                              } else {
+                                  assert response.getError() != null;
+                                  return Observable.just(response.getError().getCode());
+                              }
+                          })
                   .firstOrError()
+                  .compose(
+                          RateLimiterOperator.of(
+                                  resilienceRegistries
+                                          .rateLimiters()
+                                          .rateLimiter(ORDERS_PER_10_SECONDS_RATE_LIMITER)))
+                  .compose(
+                          RateLimiterOperator.of(
+                                  resilienceRegistries
+                                          .rateLimiters()
+                                          .rateLimiter(ORDERS_PER_DAY_RATE_LIMITER)))
                   .compose(
                           RateLimiterOperator.of(
                                   resilienceRegistries
@@ -278,24 +314,6 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
       throw new UnsupportedOperationException("binanceUserTradeStreamingService not authorized");
     }
   }
-
-    private Observable<Integer> changeOrderInternal(LimitOrder limitOrder) {
-        return binanceUserTradeStreamingService
-                        .subscribeChannel(String.valueOf(System.nanoTime()), "order.modify", limitOrder)
-                        .flatMap(
-                                node -> {
-                                    TypeReference<BinanceWebsocketOrderResponse<BinanceNewOrder>> typeReference =
-                                            new TypeReference<>() {};
-                                    BinanceWebsocketOrderResponse<BinanceNewOrder> response =
-                                            mapper.treeToValue(node, typeReference);
-                                    if (response.getStatus() == 200) {
-                                        return Observable.just(0);
-                                    } else {
-                                        assert response.getError() != null;
-                                        return Observable.just(response.getError().getCode());
-                                    }
-                                });
-    }
 
     public Single<Integer> cancelOrder(CancelOrderParams orderParams) {
     if (binanceUserTradeStreamingService.isAuthorized()) {
