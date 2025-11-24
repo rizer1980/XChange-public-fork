@@ -41,7 +41,7 @@ public class BybitStreamWebsocketTradeExample {
       }
       // main(not demo) api only
       websocketTradeExample();
-      Thread.sleep(100000000);
+      Thread.sleep(1000);
       websocketBatchTradeExample();
       exchange.disconnect().blockingAwait();
     } catch (InterruptedException e) {
