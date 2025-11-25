@@ -217,7 +217,7 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
                                     RateLimiterOperator.of(
                                             resilienceRegistries
                                                     .rateLimiters()
-                                                    .rateLimiter(RAW_REQUESTS_RATE_LIMITER)));
+                                                    .rateLimiter(REQUEST_WEIGHT_RATE_LIMITER)));
                 } else
                     throw new UnsupportedOperationException("Only spot and futures supported");
             }
