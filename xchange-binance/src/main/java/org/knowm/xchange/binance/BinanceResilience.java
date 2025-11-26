@@ -60,7 +60,7 @@ public final class BinanceResilience {
         .rateLimiter(
             RAW_REQUESTS_RATE_LIMITER,
             RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                .timeoutDuration(Duration.ZERO)
+                .timeoutDuration(Duration.ofMillis(1))
                 .limitRefreshPeriod(Duration.ofMinutes(5))
                 .limitForPeriod(61000)
                 .build());
@@ -109,7 +109,7 @@ public final class BinanceResilience {
         .rateLimiter(
             RAW_REQUESTS_RATE_LIMITER,
             RateLimiterConfig.from(registries.rateLimiters().getDefaultConfig())
-                .timeoutDuration(Duration.ofSeconds(1))
+                .timeoutDuration(Duration.ofMillis(1))
                 .limitRefreshPeriod(Duration.ofSeconds(1))
                 .limitForPeriod(Integer.MAX_VALUE)
                 .build());
