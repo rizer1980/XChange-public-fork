@@ -68,7 +68,6 @@ public class BinanceExchange extends BaseExchange implements Exchange {
         RESILIENCE_REGISTRIES = BinanceResilience.createRegistriesFuture();
       } else RESILIENCE_REGISTRIES = BinanceResilience.createRegistries();
     }
-    logger.info("Binance ResilienceRegistries: {}", RESILIENCE_REGISTRIES.hashCode());
     return RESILIENCE_REGISTRIES;
   }
 
