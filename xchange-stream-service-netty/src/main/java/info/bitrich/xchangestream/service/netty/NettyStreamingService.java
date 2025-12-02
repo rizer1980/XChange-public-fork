@@ -5,7 +5,7 @@ import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
-import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -79,7 +79,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
   private final Duration retryDuration;
   private final Duration connectionTimeout;
   private final int idleTimeoutSeconds;
-  private volatile EpollEventLoopGroup eventLoopGroup;
+  private volatile MultiThreadIoEventLoopGroup eventLoopGroup;
   protected final Map<String, Subscription> channels = new ConcurrentHashMap<>();
   private boolean compressedMessages = false;
 
@@ -186,7 +186,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                         this::messageHandler);
 
                 if (eventLoopGroup == null || eventLoopGroup.isShutdown()) {
-                  eventLoopGroup = new EpollEventLoopGroup(2);
+                  eventLoopGroup = new MultiThreadIoEventLoopGroup(EpollIoHandler.newFactory());
                 }
 
                 Bootstrap bootstrap =
