@@ -5,9 +5,8 @@ import info.bitrich.xchangestream.service.exception.NotConnectedException;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
-import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -80,7 +79,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
   private final Duration retryDuration;
   private final Duration connectionTimeout;
   private final int idleTimeoutSeconds;
-  private volatile MultiThreadIoEventLoopGroup eventLoopGroup;
+  private volatile EpollEventLoopGroup eventLoopGroup;
   protected final Map<String, Subscription> channels = new ConcurrentHashMap<>();
   private boolean compressedMessages = false;
 
@@ -187,7 +186,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                         this::messageHandler);
 
                 if (eventLoopGroup == null || eventLoopGroup.isShutdown()) {
-                  eventLoopGroup = new MultiThreadIoEventLoopGroup(2,NioIoHandler.newFactory());
+                  eventLoopGroup = new EpollEventLoopGroup(2);
                 }
 
                 Bootstrap bootstrap =
@@ -196,16 +195,16 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                         .option(
                             ChannelOption.CONNECT_TIMEOUT_MILLIS,
                             Math.toIntExact(connectionTimeout.toMillis()))
-                        .option(ChannelOption.SO_KEEPALIVE, true)
-                        .channel(NioSocketChannel.class);
+//                        .option(ChannelOption.SO_KEEPALIVE, true)
+                        .channel(EpollSocketChannel.class);
                 if (socksProxyHost != null) {
                   bootstrap.disableResolver();
                 }
                 bootstrap
-                    .handler(
-                        new ChannelInitializer<SocketChannel>() {
+                        .handler(
+                        new ChannelInitializer<EpollSocketChannel>() {
                           @Override
-                          protected void initChannel(SocketChannel ch) {
+                          protected void initChannel(EpollSocketChannel ch) {
                             ChannelPipeline p = ch.pipeline();
                             if (socksProxyHost != null) {
                               p.addLast(

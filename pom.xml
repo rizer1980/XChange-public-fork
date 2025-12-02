@@ -277,6 +277,12 @@
                 <version>4.2.7.Final</version>
             </dependency>
 
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-transport-native-epoll</artifactId>
+                <version>4.2.7.Final</version>
+                <classifier>linux-x86_64</classifier>
+            </dependency>
             <!-- for streaming-->
             <dependency>
                 <groupId>io.reactivex.rxjava3</groupId>
