@@ -4,9 +4,9 @@ import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import dto.marketdata.BybitOrderbook;
-import dto.marketdata.BybitPublicOrder;
-import dto.trade.BybitTrade;
+import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderbook;
+import info.bitrich.xchangestream.bybit.dto.marketdata.BybitPublicOrder;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitTrade;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
@@ -46,10 +46,16 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   }
 
   /**
-   * Linear & inverse: Level 1 data, push frequency: 10ms Level 50 data, push frequency: 20ms Level
-   * 200 data, push frequency: 100ms Level 500 data, push frequency: 100ms Spot: Level 1 data, push
-   * frequency: 10ms Level 50 data, push frequency: 20ms Level 200 data, push frequency: 200ms
-   *
+   * Linear & inverse:
+   * Level 1 data, push frequency: 10ms
+   * Level 50 data, push frequency: 20ms
+   * Level 200 data, push frequency: 100ms
+   * Level 1000 data, push frequency: 300ms
+   * Spot:
+   * Level 1 data, push frequency: 10ms
+   * Level 50 data, push frequency: 20ms
+   * Level 200 data, push frequency: 200ms
+   * Level 1000 data, push frequency: 300ms
    * @param args - orderbook depth
    */
   @Override
@@ -68,21 +74,29 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                 BybitOrderbook bybitOrderBooks = mapper.treeToValue(jsonNode, BybitOrderbook.class);
                 String type = bybitOrderBooks.getDataType();
                 if (type.equalsIgnoreCase("snapshot")) {
-                  OrderBook orderBook =
+                  OrderBook currentOrderBook = orderBookMap.get(channelUniqueId);
+                  OrderBook orderBookSnapshot =
                       BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
+                  if (currentOrderBook != null) {
+                    currentOrderBook.fullUpdateWithKeepStampedLockOld(orderBookSnapshot);
+                  } else {
+                    orderBookMap.put(channelUniqueId, orderBookSnapshot);
+                  }
                   orderBookUpdateIdPrev.set(bybitOrderBooks.getData().getU());
-                  orderBookMap.put(channelUniqueId, orderBook);
-                  return orderBook;
+                  return orderBookSnapshot;
                 } else if (type.equalsIgnoreCase("delta")) {
                   return applyDeltaSnapshot(
                       channelUniqueId, instrument, bybitOrderBooks, orderBookUpdateIdPrev);
                 }
-                return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
+                return orderBookMap.getOrDefault(channelUniqueId, new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false));
               } catch (IllegalStateException e) {
                 LOG.warn(
                     "Resubscribing {} channel after adapter error {}", instrument, e.getMessage());
                 // Resubscribe to the channel, triggering a new snapshot
-                orderBookMap.remove(channelUniqueId);
+                OrderBook currentOrderBook = orderBookMap.get(channelUniqueId);
+                if(currentOrderBook != null) {
+                  currentOrderBook.fullUpdateWithKeepStampedLockOld(null,Lists.newArrayList(), Lists.newArrayList());
+                }
                 if (streamingService.isSocketOpen()) {
                   streamingService.sendMessage(
                       streamingService.getUnsubscribeMessage(channelUniqueId, args));

@@ -122,7 +122,7 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
         .filter(message -> message.has("action"))
         .flatMap(
             jsonNode -> {
-              // "books5" channel pushes 5 depth levels every time.
+                // "books5" channel pushes 5 depth levels every time.
               String action =
                   channelName.equals(ORDERBOOK5) ? "snapshot" : jsonNode.get("action").asText();
               List<OkexOrderbook> okexOrderbooks =
@@ -132,10 +132,14 @@ public class OkexStreamingMarketDataService implements StreamingMarketDataServic
                           .getTypeFactory()
                           .constructCollectionType(List.class, OkexOrderbook.class));
               if ("snapshot".equalsIgnoreCase(action)) {
-                OrderBook orderBook =
-                    OkexAdapters.adaptOrderBook(okexOrderbooks, instrument, exchangeMetaData);
-                orderBookMap.put(instId, orderBook);
-                return Observable.just(orderBook);
+                  OrderBook orderBookSnapshot =
+                          OkexAdapters.adaptOrderBook(okexOrderbooks, instrument, exchangeMetaData);
+                  OrderBook currentOrderBook = orderBookMap.get(instId);
+                  if (currentOrderBook != null) {
+                      currentOrderBook.fullUpdateWithKeepStampedLockOld(orderBookSnapshot);
+                  } else
+                      orderBookMap.put(instId, orderBookSnapshot);
+                return Observable.just(orderBookSnapshot);
               } else if ("update".equalsIgnoreCase(action)) {
                 OrderBook orderBook = orderBookMap.getOrDefault(instId, null);
                 if (orderBook == null) {

@@ -1,4 +1,4 @@
-package dto.trade;
+package info.bitrich.xchangestream.bybit.dto.trade;
 
 import java.util.ArrayList;
 import java.util.List;
