@@ -237,14 +237,14 @@ public class ConcurrencyTest {
           }
         }
       } else {
-        long stamp = orderBook.lock.readLock();
+        long stamp = orderBook.getLock().readLock();
         for (LimitOrder ask : orderBook.getAsks()) {
           temp += ask.hashCode();
         }
         for (LimitOrder bid : orderBook.getBids()) {
           temp += bid.hashCode();
         }
-        orderBook.lock.unlockRead(stamp);
+        orderBook.getLock().unlockRead(stamp);
       }
     }
   }

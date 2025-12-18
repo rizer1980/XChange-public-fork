@@ -1,4 +1,4 @@
-package dto;
+package info.bitrich.xchangestream.bybit.dto;
 
 import java.util.List;
 import lombok.AllArgsConstructor;

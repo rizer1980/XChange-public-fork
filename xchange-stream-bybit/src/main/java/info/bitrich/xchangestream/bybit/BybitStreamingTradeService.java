@@ -7,11 +7,11 @@ import static info.bitrich.xchangestream.bybit.BybitUserTradeStreamingService.OR
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dto.trade.BybitComplexOrderChanges;
-import dto.trade.BybitComplexPositionChanges;
-import dto.trade.BybitOrderChangesResponse;
-import dto.trade.BybitPositionChangesResponse;
-import dto.trade.BybitStreamOrderResponse;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitComplexOrderChanges;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitComplexPositionChanges;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitOrderChangesResponse;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitPositionChangesResponse;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitStreamOrderResponse;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.github.resilience4j.rxjava3.ratelimiter.operator.RateLimiterOperator;

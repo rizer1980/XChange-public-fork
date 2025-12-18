@@ -5,16 +5,16 @@ import static org.knowm.xchange.bybit.BybitAdapters.convertBybitSymbolToInstrume
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 import static org.knowm.xchange.bybit.BybitAdapters.getOrderType;
 
-import dto.marketdata.BybitOrderbook;
-import dto.marketdata.BybitPublicOrder;
-import dto.trade.BybitComplexOrderChanges;
-import dto.trade.BybitComplexPositionChanges;
-import dto.trade.BybitOrderChangesResponse.BybitOrderChanges;
-import dto.trade.BybitOrderFlag;
-import dto.trade.BybitPositionChangesResponse.BybitPositionChanges;
-import dto.trade.BybitStreamBatchAmendOrdersPayload;
-import dto.trade.BybitStreamBatchAmendOrdersPayload.BybitStreamBatchAmendOrderPayload;
-import dto.trade.BybitTrade;
+import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderbook;
+import info.bitrich.xchangestream.bybit.dto.marketdata.BybitPublicOrder;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitComplexOrderChanges;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitComplexPositionChanges;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitOrderChangesResponse.BybitOrderChanges;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitOrderFlag;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitPositionChangesResponse.BybitPositionChanges;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitStreamBatchAmendOrdersPayload;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitStreamBatchAmendOrdersPayload.BybitStreamBatchAmendOrderPayload;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitTrade;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;

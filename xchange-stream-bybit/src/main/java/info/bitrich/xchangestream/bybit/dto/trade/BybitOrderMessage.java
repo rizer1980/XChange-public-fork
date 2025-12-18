@@ -1,4 +1,4 @@
-package dto.trade;
+package info.bitrich.xchangestream.bybit.dto.trade;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;

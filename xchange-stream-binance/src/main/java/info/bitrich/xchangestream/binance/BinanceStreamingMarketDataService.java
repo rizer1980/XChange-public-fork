@@ -32,6 +32,7 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.BehaviorSubject;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -567,7 +568,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     final Observable<DepthBinanceWebSocketTransaction> stream;
     final AtomicLong lastUpdateId = new AtomicLong();
     final AtomicLong snapshotLastUpdateId = new AtomicLong();
-    OrderBook orderBook;
+    final OrderBook orderBook = new OrderBook(new Date(0L), new ArrayList<>(), new ArrayList<>());
 
     private OrderbookSubscription(Observable<DepthBinanceWebSocketTransaction> stream) {
       this.stream = stream;
@@ -586,12 +587,14 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         BinanceOrderbook book = fetchBinanceOrderBook(instrument);
         snapshotLastUpdateId.set(book.lastUpdateId);
         lastUpdateId.set(book.lastUpdateId);
-        orderBook = BinanceMarketDataService.convertOrderBook(book, instrument);
+        OrderBook ob = BinanceMarketDataService.convertOrderBook(book, instrument);
+        // to keep StampedLock old one
+        orderBook.fullUpdateWithKeepStampedLockOld(ob);
       } catch (Exception e) {
         LOG.error("Failed to fetch initial order book for " + instrument, e);
         snapshotLastUpdateId.set(0);
         lastUpdateId.set(0);
-        orderBook = null;
+        orderBook.fullUpdateWithKeepStampedLockOld(new Date(0L), new ArrayList<>(), new ArrayList<>());
       }
     }
   }
@@ -852,7 +855,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
      */
     private final Object bookIntegrityMonitor = new Object();
 
-    private OrderBook book;
+    private final OrderBook book = new OrderBook(new Date(0L), new ArrayList<>(),new ArrayList<>());
     private long finalUpdateIdPrev = 0L;
 
     private OrderBookFutureSubscription(
@@ -911,7 +914,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
 
     private boolean isBookInitialized() {
       synchronized (bookIntegrityMonitor) {
-        return book != null;
+        return book.getTimeStamp().getTime() != 0L;
       }
     }
 
@@ -931,8 +934,8 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
       if (isBookInitialized()) {
         LOG.info("Orderbook snapshot for {} was initialized before. Re-syncing.", instrument);
         synchronized (bookIntegrityMonitor) {
-          if (book != null) {
-            book = null;
+          if (book.getTimeStamp().getTime() != 0L) {
+            book.fullUpdateWithKeepStampedLockOld(new Date(0L), new ArrayList<>(),new ArrayList<>());
             deltasBuffer.clear();
             finalUpdateIdPrev = 0;
           }
@@ -946,9 +949,8 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
               binanceBook -> {
                 final OrderBook convertedBook =
                     BinanceMarketDataService.convertOrderBook(binanceBook, instrument);
-
                 synchronized (bookIntegrityMonitor) {
-                  book = convertedBook;
+                    book.fullUpdateWithKeepStampedLockOld(convertedBook);
                   final List<DepthBinanceWebSocketTransaction> applicableBookPatches =
                       deltasBuffer.stream()
                           .filter(delta -> delta.getLastUpdateId() >= binanceBook.lastUpdateId)

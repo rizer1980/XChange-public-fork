@@ -12,12 +12,12 @@ import static org.knowm.xchange.dto.Order.OrderStatus.FILLED;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dto.marketdata.BybitOrderbook;
-import dto.trade.BybitComplexOrderChanges;
-import dto.trade.BybitComplexPositionChanges;
-import dto.trade.BybitOrderChangesResponse;
-import dto.trade.BybitPositionChangesResponse;
-import dto.trade.BybitTrade;
+import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderbook;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitComplexOrderChanges;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitComplexPositionChanges;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitOrderChangesResponse;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitPositionChangesResponse;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitTrade;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;

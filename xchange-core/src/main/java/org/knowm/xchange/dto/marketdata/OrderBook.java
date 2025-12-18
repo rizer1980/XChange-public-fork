@@ -21,7 +21,8 @@ import org.knowm.xchange.instrument.Instrument;
 public final class OrderBook implements Serializable {
 
   private static final long serialVersionUID = -7788306758114464314L;
-  @JsonIgnore public final StampedLock lock = new StampedLock();
+  @Getter
+  @JsonIgnore private final StampedLock lock = new StampedLock();
 
   /** the asks */
   @Getter private final List<LimitOrder> asks;
@@ -239,6 +240,32 @@ public final class OrderBook implements Serializable {
 
     if (updateDate != null && (timeStamp == null || updateDate.after(timeStamp))) {
       this.timeStamp = updateDate;
+    }
+  }
+
+  public void fullUpdateWithKeepStampedLockOld(Date timeStamp, List<LimitOrder> asks, List<LimitOrder> bids) {
+    var stamp = lock.writeLock();
+    try {
+      this.asks.clear();
+      this.asks.addAll(asks);
+      this.bids.clear();
+      this.bids.addAll(bids);
+      this.timeStamp = timeStamp;
+    } finally {
+      lock.unlock(stamp);
+    }
+  }
+
+  public void fullUpdateWithKeepStampedLockOld(OrderBook orderBook) {
+    var stamp = lock.writeLock();
+    try {
+      this.asks.clear();
+      this.asks.addAll(orderBook.asks);
+      this.bids.clear();
+      this.bids.addAll(orderBook.bids);
+      this.timeStamp = orderBook.timeStamp;
+    } finally {
+      lock.unlock(stamp);
     }
   }
 
