@@ -874,7 +874,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
       deltasObservable
           .doOnNext(
               delta -> {
-                synchronized (bookIntegrityMonitor) {
+//                synchronized (bookIntegrityMonitor) {
                   if (isBookInitialized()) {
                     if (!appendDelta(delta)) {
                       disposables.add(asyncInitializeOrderBookSnapshot());
@@ -882,7 +882,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                   } else {
                     bufferDelta(delta);
                   }
-                }
+//                }
               })
           .filter(delta -> isBookInitialized())
           .map(delta -> getBook())
@@ -939,7 +939,14 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
       if (isBookInitialized()) {
         LOG.info("Orderbook snapshot for {} was initialized before. Re-syncing.", instrument);
         synchronized (bookIntegrityMonitor) {
-          if (book.getTimeStamp().getTime() != 0L) {
+          long timeStamp;
+          var stamp = book.getLock().readLock();
+          try {
+            timeStamp= book.getTimeStamp().getTime();
+          } finally {
+            book.getLock().unlock(stamp);
+          }
+          if (timeStamp != 0L) {
             book.fullUpdateWithKeepStampedLockOld(new Date(0L), new ArrayList<>(),new ArrayList<>());
             deltasBuffer.clear();
             finalUpdateIdPrev = 0;
@@ -954,7 +961,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
               binanceBook -> {
                 final OrderBook convertedBook =
                     BinanceMarketDataService.convertOrderBook(binanceBook, instrument);
-                synchronized (bookIntegrityMonitor) {
+//                synchronized (bookIntegrityMonitor) {
                     book.fullUpdateWithKeepStampedLockOld(convertedBook);
                   final List<DepthBinanceWebSocketTransaction> applicableBookPatches =
                       deltasBuffer.stream()
@@ -970,7 +977,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                       disposables.add(asyncInitializeOrderBookSnapshot());
                     }
                   }
-                }
+//                }
               },
               error -> disposeWithError(error));
     }
