@@ -914,7 +914,12 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
 
     private boolean isBookInitialized() {
       synchronized (bookIntegrityMonitor) {
-        return book.getTimeStamp().getTime() != 0L;
+        var stamp = book.getLock().readLock();
+        try {
+          return book.getTimeStamp().getTime() != 0L;
+        } finally {
+          book.getLock().unlock(stamp);
+        }
       }
     }
 
