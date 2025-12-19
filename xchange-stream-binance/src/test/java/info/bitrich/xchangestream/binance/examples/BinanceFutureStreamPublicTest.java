@@ -40,8 +40,8 @@ public class BinanceFutureStreamPublicTest {
   private static StreamingExchange exchange;
   BinanceFutureStreamingExchange binanceFutureStreamingExchange;
   private static final Instrument instrument = new FuturesContract("ETH/USDT/PERP");
-  private static final Instrument instrument2 = new FuturesContract("SOL/USDT/PERP");
-  private static final boolean logOutput = false;
+  private static final Instrument instrument2 = new FuturesContract("LTC/USDT/PERP");
+  private static final boolean logOutput = true;
 
   @Before
   public void setUp() {
@@ -179,13 +179,13 @@ public class BinanceFutureStreamPublicTest {
     exchange.disconnect().blockingAwait();
   }
 
-  @Ignore
+  @Test
   public void heavyLoadTest() throws InterruptedException {
     List<Disposable> disposables = new ArrayList<>();
     ProductSubscription subscription =
         exchange.getExchangeInstruments().stream()
             .filter(instrument -> instrument instanceof FuturesContract)
-            .limit(50)
+            .limit(10)
             .reduce(
                 ProductSubscription.create(),
                 ProductSubscription.ProductSubscriptionBuilder::addOrderbook,
@@ -202,7 +202,7 @@ public class BinanceFutureStreamPublicTest {
             .subscribe(
                 orderBook -> {
                   if (logOutput) {
-                    printOrderBookShortInfo(orderBook);
+                    System.out.println(instrument+":"+printOrderBookShortInfo(orderBook));
                   }
                   assertThat(orderBook.getBids().get(0).getLimitPrice())
                       .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
@@ -215,7 +215,27 @@ public class BinanceFutureStreamPublicTest {
                               > 0)
                       .isTrue();
                 }));
-    Thread.sleep(3000);
+    disposables.add(
+        exchange
+            .getStreamingMarketDataService()
+            .getOrderBook(instrument2)
+            .subscribe(
+                orderBook -> {
+                  if (logOutput) {
+                    System.out.println(instrument2+":"+printOrderBookShortInfo(orderBook));
+                  }
+                  assertThat(orderBook.getBids().get(0).getLimitPrice())
+                      .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
+                  assertThat(
+                      orderBook
+                          .getAsks()
+                          .get(0)
+                          .getLimitPrice()
+                          .compareTo(orderBook.getBids().get(0).getLimitPrice())
+                          > 0)
+                      .isTrue();
+                }));
+    Thread.sleep(30000);
     disposables.forEach(Disposable::dispose);
     exchange.disconnect().blockingAwait();
   }
