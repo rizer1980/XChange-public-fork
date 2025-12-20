@@ -46,16 +46,10 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   }
 
   /**
-   * Linear & inverse:
-   * Level 1 data, push frequency: 10ms
-   * Level 50 data, push frequency: 20ms
-   * Level 200 data, push frequency: 100ms
-   * Level 1000 data, push frequency: 300ms
-   * Spot:
-   * Level 1 data, push frequency: 10ms
-   * Level 50 data, push frequency: 20ms
-   * Level 200 data, push frequency: 200ms
-   * Level 1000 data, push frequency: 300ms
+   * Linear & inverse: Level 1 data, push frequency: 10ms Level 50 data, push frequency: 20ms Level
+   * 200 data, push frequency: 100ms Level 500 data, push frequency: 100ms Spot: Level 1 data, push
+   * frequency: 10ms Level 50 data, push frequency: 20ms Level 200 data, push frequency: 200ms
+   *
    * @param args - orderbook depth
    */
   @Override

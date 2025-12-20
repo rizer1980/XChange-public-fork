@@ -1,8 +1,16 @@
 package info.bitrich.xchangestream.bybit.example;
 
+import static info.bitrich.xchangestream.bybit.Utils.getMinAmount;
+import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectMainApi;
+
 import info.bitrich.xchangestream.bybit.BybitStreamingExchange;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import io.reactivex.rxjava3.disposables.Disposable;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.trade.BybitCancelOrderParams;
@@ -17,15 +25,6 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import static info.bitrich.xchangestream.bybit.Utils.getMinAmount;
-import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectMainApi;
 
 public class BybitStreamWebsocketTradeExample {
 
@@ -120,8 +119,8 @@ public class BybitStreamWebsocketTradeExample {
                 throwable -> LOG.error("throwable", throwable)));
     Thread.sleep(1000);
     List<CancelOrderParams> ordersToCancel = new ArrayList<>();
-    ordersToCancel.add(new BybitCancelOrderParams(instrument, "",limitOrder1UserId));
-    ordersToCancel.add(new BybitCancelOrderParams(instrument, "",limitOrder2UserId));
+    ordersToCancel.add(new BybitCancelOrderParams(instrument, "", limitOrder1UserId));
+    ordersToCancel.add(new BybitCancelOrderParams(instrument, "", limitOrder2UserId));
     compositeDisposable.add(
         exchange
             .getStreamingTradeService()
