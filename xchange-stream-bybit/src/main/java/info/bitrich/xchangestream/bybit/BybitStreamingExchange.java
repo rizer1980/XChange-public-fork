@@ -72,7 +72,6 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
 
   private String getApiUrl() {
     String apiUrl;
-    if (exchangeSpecification.getApiKey() == null) {
       if (Boolean.TRUE.equals(
           exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX))) {
         apiUrl = TESTNET_URI;
@@ -84,14 +83,6 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
               + ((BybitCategory)
                       exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE))
                   .getValue();
-    } else {
-      if (Boolean.TRUE.equals(
-          exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX))) {
-        apiUrl = TESTNET_AUTH_URI;
-      } else {
-        apiUrl = AUTH_URI;
-      }
-    }
     return apiUrl;
   }
 
