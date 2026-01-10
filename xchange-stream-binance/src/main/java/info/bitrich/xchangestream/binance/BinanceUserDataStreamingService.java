@@ -60,10 +60,10 @@ public class BinanceUserDataStreamingService extends JsonNettyStreamingService {
     return null;
   }
 
-  @Override
-  protected WebSocketClientExtensionHandler getWebSocketClientExtensionHandler() {
-    return WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler.INSTANCE;
-  }
+//  @Override
+//  protected WebSocketClientExtensionHandler getWebSocketClientExtensionHandler() {
+//    return WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler.INSTANCE;
+//  }
 
   @Override
   public void sendMessage(String message) {
