@@ -1,7 +1,7 @@
 package info.bitrich.xchangestream.bybit;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import dto.BybitSubscribeMessage;
+import info.bitrich.xchangestream.bybit.dto.BybitSubscribeMessage;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextHandler;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
