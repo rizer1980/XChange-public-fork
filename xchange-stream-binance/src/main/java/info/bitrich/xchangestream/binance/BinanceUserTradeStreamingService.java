@@ -8,11 +8,16 @@ import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATIO
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import info.bitrich.xchangestream.binance.dto.trade.*;
+import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketLoginPayloadWithSignature;
+import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketLoginResponse;
+import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderAmendPayload;
+import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderCancelAndReplacePayload;
+import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderCancelPayload;
+import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderResponse;
+import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketPayload;
+import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketPlaceOrderPayload;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
-import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableSource;
 import io.reactivex.rxjava3.core.Observable;
@@ -48,12 +53,12 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceUserTradeStreamingService.class);
   private static final Pattern p = Pattern.compile("[a-z.]+|\\d+");
-  CompositeDisposable compositeDisposable = new CompositeDisposable();
-  @Getter private boolean authorized = false;
-  private String signature = "";
-  Charset charSet = StandardCharsets.UTF_8;
   private final String apiKey;
   private final String privateKey;
+  CompositeDisposable compositeDisposable = new CompositeDisposable();
+  Charset charSet = StandardCharsets.UTF_8;
+  @Getter private boolean authorized = false;
+  private String signature = "";
   private Disposable loginDisposable;
 
   public BinanceUserTradeStreamingService(
@@ -256,10 +261,5 @@ public class BinanceUserTradeStreamingService extends JsonNettyStreamingService 
       default:
         return null;
     }
-  }
-
-  @Override
-  protected WebSocketClientExtensionHandler getWebSocketClientExtensionHandler() {
-    return WebSocketClientCompressionAllowClientNoContextAndServerNoContextHandler.INSTANCE;
   }
 }
