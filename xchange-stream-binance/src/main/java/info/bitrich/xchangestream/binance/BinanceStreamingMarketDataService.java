@@ -71,6 +71,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BinanceStreamingMarketDataService implements StreamingMarketDataService {
+
   private static final Logger LOG =
       LoggerFactory.getLogger(BinanceStreamingMarketDataService.class);
 
@@ -100,6 +101,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   private Observable<List<BinanceTicker24h>> allRollingWindowTickerSubscriptions;
   private Map<Instrument, Integer> fundingRateInfoMap;
   private Disposable fundingRateInfoUpdate;
+  private final Map<Instrument, Observable<FundingRate>> fundingRateInfoSubscriptions;
 
   /**
    * A scheduler for initialisation of binance order book snapshots, which is delegated to a
@@ -142,6 +144,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     this.orderBookRawUpdatesSubscriptions = new ConcurrentHashMap<>();
     this.klineSubscriptions = new ConcurrentHashMap<>();
     this.fundingRateInfoMap = new ConcurrentHashMap<>();
+    this.fundingRateInfoSubscriptions = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -194,26 +197,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
 
   @Override
   public Observable<FundingRate> getFundingRate(Instrument instrument, Object... args) {
-    // init update info for funding rate interval
-    synchronized (this) {
-      if (fundingRateInfoUpdate == null) {
-        fundingRateInfoUpdate =
-            Observable.interval(10, 10, TimeUnit.MINUTES).subscribe(x -> updateFundingRateInfo());
-        updateFundingRateInfo();
-      }
-    }
-    return service
-        .subscribeChannel(
-            channelFromCurrency(instrument, BinanceSubscriptionType.FUNDING_RATES.getType()))
-        .map(
-            it ->
-                this.<FundingRateWebsocketTransaction>readTransaction(
-                    it, FUNDING_RATE_TYPE, "funding rate"))
-        .map(BinanceWebsocketTransaction::getData)
-        .filter(data -> BinanceAdapters.adaptSymbol(data.getSymbol(), true).equals(instrument))
-        .map(
-            transaction ->
-                transaction.toFundingRate((fundingRateInfoMap.getOrDefault(instrument, 8))));
+    return rawFundingRate(instrument);
   }
 
   private void updateFundingRateInfo() {
@@ -401,7 +385,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     productSubscription.getTicker().forEach(this::initTickerSubscription);
     productSubscription.getOrderBook().forEach(this::initRawOrderBookUpdatesSubscription);
     productSubscription.getTrades().forEach(this::initTradeSubscription);
-    productSubscription.getFundingRates().forEach(this::initTradeSubscription);
+    productSubscription.getFundingRates().forEach(this::initFundingRateSubscription);
   }
 
   private void initKlineSubscription(Instrument instrument, Set<KlineInterval> klineIntervals) {
@@ -526,6 +510,41 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
         instrument, triggerObservableBody(rawOrderBookUpdates(instrument)));
   }
 
+  private void initFundingRateSubscription(Instrument instrument) {
+    fundingRateInfoSubscriptions.put(
+        instrument, triggerObservableBody(rawFundingRate(instrument)).share());
+  }
+
+  private Observable<FundingRate> rawFundingRate(Instrument instrument) {
+    if (!service.isLiveSubscriptionEnabled()
+        && !service.getProductSubscription().getFundingRates().contains(instrument)) {
+      throw new UpFrontSubscriptionRequiredException();
+    }
+    return fundingRateInfoSubscriptions.computeIfAbsent(
+        instrument, s -> triggerObservableBody(rawFundingRateStream(instrument)).share());
+  }
+
+  private Observable<FundingRate> rawFundingRateStream(Instrument instrument) {
+    // init update info for funding rate interval
+    synchronized (this) {
+      if (fundingRateInfoUpdate == null) {
+        fundingRateInfoUpdate =
+            Observable.interval(10, 10, TimeUnit.MINUTES).subscribe(x -> updateFundingRateInfo());
+        updateFundingRateInfo();
+      }
+    }
+    return service
+        .subscribeChannel(
+            channelFromCurrency(instrument, BinanceSubscriptionType.FUNDING_RATES.getType()))
+        .map(
+            it ->
+                this.<FundingRateWebsocketTransaction>readTransaction(
+                    it, FUNDING_RATE_TYPE, "funding rate"))
+        .map(BinanceWebsocketTransaction::getData)
+        .filter(data -> BinanceAdapters.adaptSymbol(data.getSymbol(), true).equals(instrument))
+        .map(transaction -> transaction.toFundingRate(fundingRateInfoMap.getOrDefault(instrument, 8)));
+  }
+
   private Observable<BinanceTicker24h> rawTickerStream(Instrument instrument) {
     return service
         .subscribeChannel(channelFromCurrency(instrument, BinanceSubscriptionType.TICKER.getType()))
@@ -594,6 +613,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
   }
 
   private final class OrderbookSubscription {
+
     final Observable<DepthBinanceWebSocketTransaction> stream;
     final AtomicLong lastUpdateId = new AtomicLong();
     final AtomicLong snapshotLastUpdateId = new AtomicLong();
@@ -608,7 +628,9 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
     }
 
     void initSnapshotIfInvalid(Instrument instrument) {
-      if (snapshotLastUpdateId.get() != 0) return;
+      if (snapshotLastUpdateId.get() != 0) {
+        return;
+      }
       try {
         LOG.info("Fetching initial orderbook snapshot for {} ", instrument);
         onApiCall.run();
@@ -870,6 +892,7 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
    */
   @SuppressWarnings("Convert2MethodRef")
   private final class OrderBookFutureSubscription implements Disposable {
+
     private final Instrument instrument;
     private final Observable<DepthBinanceWebSocketTransaction> deltasObservable;
 
