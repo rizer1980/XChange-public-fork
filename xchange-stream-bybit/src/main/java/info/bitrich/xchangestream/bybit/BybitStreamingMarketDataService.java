@@ -6,10 +6,9 @@ import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import dto.BybitResponse;
-import dto.marketdata.BybitOrderbook;
-import dto.marketdata.BybitPublicOrder;
-import dto.trade.BybitTrade;
+import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderbook;
+import info.bitrich.xchangestream.bybit.dto.marketdata.BybitPublicOrder;
+import info.bitrich.xchangestream.bybit.dto.trade.BybitTrade;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.rxjava3.core.Observable;
@@ -226,7 +225,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
         .subscribeChannel(channelUniqueId)
         .map(
             jsonNode -> {
-              BybitResponse<BybitLinearInverseTicker> bybitTicker =
+              dto.BybitResponse<BybitLinearInverseTicker> bybitTicker =
                   mapper.treeToValue(jsonNode, new TypeReference<>() {
                   });
               String type = bybitTicker.getType();
