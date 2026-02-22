@@ -3,6 +3,7 @@ package info.bitrich.xchangestream.okex;
 import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
 import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
 import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
+import static info.bitrich.xchangestream.okex.OkexStreamingService.ORDERBOOK_BBO_TBT;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import info.bitrich.xchangestream.core.StreamingExchange;
@@ -104,7 +105,7 @@ public class OkexStreamingPublicDataIntegration {
     Disposable dis2 =
         exchange
             .getStreamingMarketDataService()
-            .getOrderBook(instrumentSHIB)
+            .getOrderBook(instrumentSHIB, ORDERBOOK_BBO_TBT)
             .subscribe(
                 orderBook -> {
                   //                  System.out.println(orderBook);
