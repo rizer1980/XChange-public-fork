@@ -270,7 +270,11 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
   }
 
   public Observable<State> connectionStateObservableUserData() {
-    return userDataFutureStreamingService.subscribeConnectionState();
+    if (isFuturesEnabled()) {
+      return userDataFutureStreamingService.subscribeConnectionState();
+    } else {
+      return userDataSpotStreamingService.subscribeConnectionState();
+    }
   }
 
   public Observable<State> connectionStateObservableUserTrade() {
