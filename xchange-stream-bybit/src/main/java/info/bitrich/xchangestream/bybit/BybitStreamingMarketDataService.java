@@ -17,6 +17,8 @@ import io.reactivex.rxjava3.subjects.PublishSubject;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.FundingRate;
@@ -55,63 +58,80 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   }
 
   /**
-   * Linear & inverse: Level 1 data, push frequency: 10ms Level 50 data, push frequency: 20ms Level
-   * 200 data, push frequency: 100ms Level 500 data, push frequency: 100ms Spot: Level 1 data, push
+   * Linear & inverse: Level 1 data, push frequency: 10ms Level 50 data, push frequency: 20ms Level 200 data, push frequency: 100ms Level 500 data, push frequency: 100ms Spot: Level 1 data, push
    * frequency: 10ms Level 50 data, push frequency: 20ms Level 200 data, push frequency: 200ms
    *
-   * @param args - orderbook depth
+   * @param args - orderbook depth or several depths
    */
   @Override
   public Observable<OrderBook> getOrderBook(Instrument instrument, Object... args) {
-    String depth = "50";
-    AtomicLong orderBookUpdateIdPrev = new AtomicLong();
+    List<Integer> depths = new ArrayList<>();
+    List<AtomicLong> orderBookUpdateIdPrev = new ArrayList<>();
     if (args.length > 0 && args[0] != null) {
-      depth = args[0].toString();
+      depths = Arrays.stream(args[0].toString().split(","))
+          .map(String::trim) // Optional: remove leading/trailing whitespace
+          .map(Integer::parseInt)
+          .collect(Collectors.toList());
+      // highest first, to receive snapshot
+      depths.sort(Comparator.reverseOrder());
+    } else {
+      depths.add(50);
     }
-    String channelUniqueId = ORDERBOOK + depth + "." + convertToBybitSymbol(instrument);
-    return streamingService
-        .subscribeChannel(channelUniqueId)
-        .map(
-            jsonNode -> {
-              try {
-                BybitOrderbook bybitOrderBooks = mapper.treeToValue(jsonNode, BybitOrderbook.class);
-                String type = bybitOrderBooks.getDataType();
-                if (type.equalsIgnoreCase("snapshot")) {
-                  OrderBook orderBook =
-                      BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
-                  orderBookUpdateIdPrev.set(bybitOrderBooks.getData().getU());
-                  orderBookMap.put(channelUniqueId, orderBook);
-                  return orderBook;
-                } else if (type.equalsIgnoreCase("delta")) {
-                  return applyOrderBookDeltaSnapshot(
-                      channelUniqueId, instrument, bybitOrderBooks, orderBookUpdateIdPrev);
+    String orderBookMapId = ORDERBOOK + convertToBybitSymbol(instrument);
+    List<Observable<OrderBook>> observableList = new ArrayList<>();
+    for (int i = 0; i < depths.size(); i++) {
+      orderBookUpdateIdPrev.add(new AtomicLong());
+      String channelUniqueId = ORDERBOOK + depths.get(i) + "." + convertToBybitSymbol(instrument);
+      int finalI = i;
+      observableList.add(streamingService
+          .subscribeChannel(channelUniqueId)
+          .map(
+              jsonNode -> {
+                try {
+                  BybitOrderbook bybitOrderBooks = mapper.treeToValue(jsonNode, BybitOrderbook.class);
+                  String type = bybitOrderBooks.getDataType();
+                  if (type.equalsIgnoreCase("snapshot")) {
+                    orderBookUpdateIdPrev.get(finalI).set(bybitOrderBooks.getData().getU());
+                    // snapshot only for first stream
+                    if (finalI == 0) {
+                      OrderBook orderBook =
+                          BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
+                      orderBookMap.put(orderBookMapId, orderBook);
+                      return orderBook;
+                    }
+                  } else if (type.equalsIgnoreCase("delta")) {
+                    return applyOrderBookDeltaSnapshot(
+                        orderBookMapId, instrument, bybitOrderBooks, orderBookUpdateIdPrev.get(finalI));
+                  }
+                  return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
+                } catch (IllegalStateException e) {
+                  LOG.warn(
+                      "Resubscribing {} channel after adapter error {}", instrument, e.getMessage());
+                  // Resubscribe to the channel, triggering a new snapshot
+                  orderBookMap.remove(orderBookMapId);
+                  if (streamingService.isSocketOpen()) {
+                    streamingService.sendMessage(
+                        streamingService.getUnsubscribeMessage(channelUniqueId, args));
+                    streamingService.sendMessage(
+                        streamingService.getSubscribeMessage(channelUniqueId, args));
+                  }
+                  return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
                 }
-                return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
-              } catch (IllegalStateException e) {
-                LOG.warn(
-                    "Resubscribing {} channel after adapter error {}", instrument, e.getMessage());
-                // Resubscribe to the channel, triggering a new snapshot
-                orderBookMap.remove(channelUniqueId);
-                if (streamingService.isSocketOpen()) {
-                  streamingService.sendMessage(
-                      streamingService.getUnsubscribeMessage(channelUniqueId, args));
-                  streamingService.sendMessage(
-                      streamingService.getSubscribeMessage(channelUniqueId, args));
-                }
-                return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
-              }
-            })
-        .filter(orderBook -> !orderBook.getBids().isEmpty() && !orderBook.getAsks().isEmpty());
+              })
+          .filter(orderBook -> !orderBook.getBids().isEmpty() && !orderBook.getAsks().isEmpty()));
+
+    }
+    return Observable.merge(observableList);
   }
 
   private OrderBook applyOrderBookDeltaSnapshot(
-      String channelUniqueId,
+      String orderBookMapId,
       Instrument instrument,
       BybitOrderbook bybitOrderBookUpdate,
       AtomicLong orderBookUpdateIdPrev) {
-    OrderBook orderBook = orderBookMap.getOrDefault(channelUniqueId, null);
+    OrderBook orderBook = orderBookMap.getOrDefault(orderBookMapId, null);
     if (orderBook == null) {
-      LOG.error("Failed to get orderBook, channelUniqueId= {}", channelUniqueId);
+      LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
       return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
     }
     if (orderBookUpdateIdPrev.incrementAndGet() == bybitOrderBookUpdate.getData().getU()) {
@@ -207,7 +227,8 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
         .map(
             jsonNode -> {
               BybitResponse<BybitLinearInverseTicker> bybitTicker =
-                  mapper.treeToValue(jsonNode, new TypeReference<>() {});
+                  mapper.treeToValue(jsonNode, new TypeReference<>() {
+                  });
               String type = bybitTicker.getType();
               if (type.equalsIgnoreCase("snapshot")) {
                 FundingRate fundingRate =
@@ -252,7 +273,9 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
             TimeUnit.MILLISECONDS.toMinutes(
                 fundingRate.getFundingRateDate().getTime() - System.currentTimeMillis()));
         return fundingRate;
-      } else return new FundingRate();
+      } else {
+        return new FundingRate();
+      }
     } else {
       LOG.error("Failed to get fundingRate, channelUniqueId= {}", channelUniqueId);
       return new FundingRate();
