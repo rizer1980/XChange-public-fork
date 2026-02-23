@@ -90,7 +90,7 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
   }
 
   public Observable<ExecutionReportBinanceUserTransaction> getRawExecutionReports() {
-    if (exchange.isFuturesEnabled()) {
+    if (exchange.isFuturesEnabled()) { // portfolio margin mode
       if (binanceUserDataFutureStreamingService == null
           || !binanceUserDataFutureStreamingService.isSocketOpen()) {
         throw new ExchangeSecurityException("Not authenticated");
