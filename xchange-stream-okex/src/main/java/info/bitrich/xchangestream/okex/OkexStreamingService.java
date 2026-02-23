@@ -34,6 +34,7 @@ public class OkexStreamingService extends JsonNettyStreamingService {
   public static final String TRADES = "trades";
   public static final String ORDERBOOK = "books";
   public static final String ORDERBOOK5 = "books5";
+  public static final String ORDERBOOK_BBO_TBT = "bbo-tbt";
   public static final String FUNDING_RATE = "funding-rate";
   public static final String TICKERS = "tickers";
 
@@ -89,6 +90,9 @@ public class OkexStreamingService extends JsonNettyStreamingService {
       LOG.error("Error parsing incoming message to JSON: {}", message);
       return;
     }
+    if (jsonNode.get("event") != null && jsonNode.get("event").asText().equals("subscribe")) {
+      return;
+    }
     if (processArrayMessageSeparately() && jsonNode.isArray()) {
       // In case of array - handle every message separately.
       for (JsonNode node : jsonNode) {
@@ -127,6 +131,8 @@ public class OkexStreamingService extends JsonNettyStreamingService {
   private OkexSubscriptionTopic getTopic(String channelName) {
     if (channelName.contains(ORDERBOOK5)) {
       return new OkexSubscriptionTopic(ORDERBOOK5, null, null, channelName.replace(ORDERBOOK5, ""));
+    } else if (channelName.contains(ORDERBOOK_BBO_TBT)) {
+      return new OkexSubscriptionTopic(ORDERBOOK_BBO_TBT, null, null, channelName.replace(ORDERBOOK_BBO_TBT, ""));
     } else if (channelName.contains(ORDERBOOK)) {
       return new OkexSubscriptionTopic(ORDERBOOK, null, null, channelName.replace(ORDERBOOK, ""));
     } else if (channelName.contains(TRADES)) {
