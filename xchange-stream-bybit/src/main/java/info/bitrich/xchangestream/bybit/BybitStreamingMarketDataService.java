@@ -2,6 +2,8 @@ package info.bitrich.xchangestream.bybit;
 
 import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptFundingRateInterval;
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
+import static org.knowm.xchange.dto.Order.OrderType.ASK;
+import static org.knowm.xchange.dto.Order.OrderType.BID;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,6 +36,7 @@ import org.knowm.xchange.dto.marketdata.FundingRate;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
 import org.knowm.xchange.dto.marketdata.Trade;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +69,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
    */
   @Override
   public Observable<OrderBook> getOrderBook(Instrument instrument, Object... args) {
-    List<Integer> depths = new ArrayList<>();
+    List<Integer> depths;
     List<AtomicLong> orderBookUpdateIdPrev = new ArrayList<>();
     if (args.length > 0 && args[0] != null) {
       depths = Arrays.stream(args[0].toString().split(","))
@@ -75,6 +79,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
       // highest first, to receive snapshot
       depths.sort(Comparator.reverseOrder());
     } else {
+      depths = new ArrayList<>();
       depths.add(50);
     }
     String orderBookMapId = ORDERBOOK + convertToBybitSymbol(instrument);
@@ -100,8 +105,21 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                       return orderBook;
                     }
                   } else if (type.equalsIgnoreCase("delta")) {
-                    return applyOrderBookDeltaSnapshot(
-                        orderBookMapId, instrument, bybitOrderBooks, orderBookUpdateIdPrev.get(finalI));
+                    OrderBook orderBook = orderBookMap.getOrDefault(orderBookMapId, null);
+                    if (orderBook == null) {
+                      LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
+                      return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
+                    }
+                    if (depths.get(finalI) == 1)
+                    // If we are processing a level 1 snapshot, we procees it like a ticker, remove higher(BID) or lower(ASK) levels
+                    {
+                      updateAsTicker(orderBook.getBids(), orderBook, bybitOrderBooks.getData().getBid().get(0), BID, instrument, new Date(bybitOrderBooks.getCts()));
+                      updateAsTicker(orderBook.getAsks(), orderBook, bybitOrderBooks.getData().getAsk().get(0), ASK, instrument, new Date(bybitOrderBooks.getCts()));
+                      return orderBook;
+                    } else {
+                      return applyOrderBookDeltaSnapshot(
+                          orderBook, instrument, bybitOrderBooks, orderBookUpdateIdPrev.get(finalI));
+                    }
                   }
                   return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
                 } catch (IllegalStateException e) {
@@ -125,15 +143,10 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   }
 
   private OrderBook applyOrderBookDeltaSnapshot(
-      String orderBookMapId,
+      OrderBook orderBook,
       Instrument instrument,
       BybitOrderbook bybitOrderBookUpdate,
       AtomicLong orderBookUpdateIdPrev) {
-    OrderBook orderBook = orderBookMap.getOrDefault(orderBookMapId, null);
-    if (orderBook == null) {
-      LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
-      return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
-    }
     if (orderBookUpdateIdPrev.incrementAndGet() == bybitOrderBookUpdate.getData().getU()) {
       LOG.debug(
           "orderBookUpdate id {}, seq {} ",
@@ -163,6 +176,103 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
           bybitOrderBookUpdate.getData().getU());
       throw new IllegalStateException("orderBookUpdate id sequence failed");
     }
+  }
+
+  private void updateAsTicker(List<LimitOrder> limitOrders, OrderBook orderBook, BybitPublicOrder order, Order.OrderType orderType, Instrument instrument, Date timeStamp) {
+    BigDecimal amount = new BigDecimal(order.getSize());
+    BigDecimal price = new BigDecimal(order.getPrice());
+    LimitOrder lo = BybitStreamAdapters.adaptOrderBookOrder(order, instrument, orderType, timeStamp);
+    long stamp = orderBook.lock.readLock();
+    int idx = Collections.binarySearch(limitOrders, lo);
+    try {
+      while (true) {
+        long writeStamp = orderBook.lock.tryConvertToWriteLock(stamp);
+        if (writeStamp != 0L) {
+          stamp = writeStamp;
+
+          if (idx == 0) {
+            if (limitOrders.get(0).getOriginalAmount().compareTo(amount) != 0) {
+              limitOrders.remove(0);
+              limitOrders.add(0, lo);
+              orderBook.updateDate(timeStamp);
+            }
+            break; // fully equal, skip
+          }
+          if (idx >= 1) {
+            limitOrders.subList(0, idx + 1).clear();
+            limitOrders.add(0, lo);
+            orderBook.updateDate(timeStamp);
+            break;
+          }
+          // idx <0
+          idx = -idx - 1;
+          if (idx == 0) { //  higher than first
+            limitOrders.add(0, lo);
+            orderBook.updateDate(timeStamp);
+          } else {
+            limitOrders.subList(0, idx).clear();
+            limitOrders.add(0, lo);
+            orderBook.updateDate(timeStamp);
+          }
+          break;
+        } else {
+          orderBook.lock.unlockRead(stamp);
+          stamp = orderBook.lock.writeLock();
+          // here wee need to recheck idx, because it is possible that orderBook changed between
+          // unlockRead and writeLock
+          if (recheckIdx(limitOrders, price, idx)) {
+            idx = Collections.binarySearch(limitOrders, lo);
+          }
+        }
+      }
+    } finally {
+      orderBook.lock.unlock(stamp);
+    }
+  }
+
+  private boolean recheckIdx(List<LimitOrder> limitOrders, BigDecimal price, int idx) {
+    switch (idx) {
+      case 0: {
+        if (!limitOrders.isEmpty()) {
+          // if not equals, need to recheck
+          return limitOrders.get(0).getLimitPrice().compareTo(price) != 0;
+        } else {
+          return true;
+        }
+      }
+      case -1: {
+        if (limitOrders.isEmpty()) {
+          return false;
+        } else {
+          return limitOrders.get(0).getLimitPrice().compareTo(price) <= 0;
+        }
+      }
+      default:
+        return true;
+    }
+  }
+
+  public static int indexedBinarySearch(List<LimitOrder> list, BigDecimal price, boolean reverseOrder) {
+    int low = 0;
+    int high = list.size() - 1;
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      BigDecimal midVal = list.get(mid).getLimitPrice();
+      int cmp;
+      if (!reverseOrder) {
+        cmp = midVal.compareTo(price);
+      } else {
+        cmp = -midVal.compareTo(price);
+      }
+      if (cmp < 0) {
+        low = mid + 1;
+      } else if (cmp > 0) {
+        high = mid - 1;
+      } else {
+        return mid; // key found
+      }
+    }
+    return -(low + 1);  // key not found
   }
 
   @Override
