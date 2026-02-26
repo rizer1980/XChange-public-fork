@@ -331,7 +331,7 @@ public class BybitStreamAdapters {
     FundingRateInterval rateInterval = adaptFundingRateInterval(interval);
     BigDecimal fundingRate1h =
         fundingRate.divide(
-            BigDecimal.valueOf(interval), fundingRate.scale(), RoundingMode.HALF_EVEN);
+            BigDecimal.valueOf(interval), fundingRate.scale() + 3, RoundingMode.HALF_UP);
     return new FundingRate.Builder()
         .fundingRate1h(fundingRate1h)
         .fundingRate(fundingRate)
