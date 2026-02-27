@@ -96,6 +96,17 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                   String type = bybitOrderBooks.getDataType();
                   if (type.equalsIgnoreCase("snapshot")) {
                     orderBookUpdateIdPrev.get(finalI).set(bybitOrderBooks.getData().getU());
+                    if (depths.get(finalI) == 1) {
+                      // If we are processing a level 1 snapshot, we procees it like a ticker, remove higher(BID) or lower(ASK) levels
+                      OrderBook orderBook = orderBookMap.getOrDefault(orderBookMapId, null);
+                      if (orderBook == null) {
+                        LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
+                        return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
+                      }
+                      updateAsTicker(orderBook.getBids(), orderBook, bybitOrderBooks.getData().getBid().get(0), BID, instrument, new Date(bybitOrderBooks.getCts()));
+                      updateAsTicker(orderBook.getAsks(), orderBook, bybitOrderBooks.getData().getAsk().get(0), ASK, instrument, new Date(bybitOrderBooks.getCts()));
+                      return orderBook;
+                    }
                     // snapshot only for first stream
                     if (finalI == 0) {
                       OrderBook orderBook =
@@ -104,21 +115,8 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                       return orderBook;
                     }
                   } else if (type.equalsIgnoreCase("delta")) {
-                    OrderBook orderBook = orderBookMap.getOrDefault(orderBookMapId, null);
-                    if (orderBook == null) {
-                      LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
-                      return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
-                    }
-                    if (depths.get(finalI) == 1)
-                    // If we are processing a level 1 snapshot, we procees it like a ticker, remove higher(BID) or lower(ASK) levels
-                    {
-                      updateAsTicker(orderBook.getBids(), orderBook, bybitOrderBooks.getData().getBid().get(0), BID, instrument, new Date(bybitOrderBooks.getCts()));
-                      updateAsTicker(orderBook.getAsks(), orderBook, bybitOrderBooks.getData().getAsk().get(0), ASK, instrument, new Date(bybitOrderBooks.getCts()));
-                      return orderBook;
-                    } else {
                       return applyOrderBookDeltaSnapshot(
-                          orderBook, instrument, bybitOrderBooks, orderBookUpdateIdPrev.get(finalI));
-                    }
+                          orderBookMapId, instrument, bybitOrderBooks, orderBookUpdateIdPrev.get(finalI));
                   }
                   return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
                 } catch (IllegalStateException e) {
@@ -142,10 +140,15 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
   }
 
   private OrderBook applyOrderBookDeltaSnapshot(
-      OrderBook orderBook,
+      String orderBookMapId,
       Instrument instrument,
       BybitOrderbook bybitOrderBookUpdate,
       AtomicLong orderBookUpdateIdPrev) {
+    OrderBook orderBook = orderBookMap.getOrDefault(orderBookMapId, null);
+    if (orderBook == null) {
+      LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
+      return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
+    }
     if (orderBookUpdateIdPrev.incrementAndGet() == bybitOrderBookUpdate.getData().getU()) {
       LOG.debug(
           "orderBookUpdate id {}, seq {} ",
