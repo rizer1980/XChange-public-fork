@@ -6,6 +6,7 @@ import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connect
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.rxjava3.disposables.Disposable;
 import java.io.IOException;
+import java.sql.SQLOutput;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -91,7 +92,8 @@ public class BybitStreamOrderBookAndFeesExample {
 
   private static void getOrderBookExample() throws InterruptedException {
     exchange = connectMainApi(BybitCategory.LINEAR, false);
-    subscribeOrderBook("200,50,1");
+    subscribeOrderBook("200,50");
+    subscribeOrderBook("1");
     Thread.sleep(120000L);
     for (Disposable dis : booksDisposable) {
       dis.dispose();
@@ -100,6 +102,7 @@ public class BybitStreamOrderBookAndFeesExample {
   }
 
   private static void subscribeOrderBook(String depth) {
+    //                  overlapCheck(Instant.now(), orderBook, instrument, "subscribeOrderBook");
     booksDisposable.add(
         exchange
             .getStreamingMarketDataService()
@@ -112,10 +115,7 @@ public class BybitStreamOrderBookAndFeesExample {
                   }
                 })
             .subscribe(
-                orderBook -> {
-                  overlapCheck(Instant.now(), orderBook, instrument, "subscribeOrderBook");
-                  System.out.print(".");
-                },
+                orderbook -> System.out.print("."),
                 throwable -> {
                   LOG.error(throwable.getMessage());
                 }));
