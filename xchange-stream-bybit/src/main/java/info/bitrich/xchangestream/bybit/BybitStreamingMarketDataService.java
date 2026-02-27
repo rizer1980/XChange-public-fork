@@ -101,24 +101,13 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                   String type = bybitOrderBooks.getDataType();
                   if (type.equalsIgnoreCase("snapshot")) {
                     orderBookUpdateIdPrev.get(finalI).set(bybitOrderBooks.getData().getU());
-                    if (depths.get(finalI) == 1) {
-                      // If we are processing a level 1 snapshot, we procees it like a ticker, remove higher(BID) or lower(ASK) levels
-                      OrderBook orderBook = orderBookMap.getOrDefault(orderBookMapId, null);
-                      if (orderBook == null) {
-                        LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
-                        return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
-                      }
-//                      updateAsTicker(orderBook.getBids(), orderBook, bybitOrderBooks.getData().getBid().get(0), BID, instrument, new Date(bybitOrderBooks.getCts()));
-//                      updateAsTicker(orderBook.getAsks(), orderBook, bybitOrderBooks.getData().getAsk().get(0), ASK, instrument, new Date(bybitOrderBooks.getCts()));
-                      return orderBook;
-                    }
-                    // snapshot only for first stream
-                    if (finalI == 0) {
-                      OrderBook orderBook =
-                          BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
+                    OrderBook orderBook =
+                        BybitStreamAdapters.adaptOrderBook(bybitOrderBooks, instrument);
+                    if (finalI == 0 && depths.get(finalI) != 1) {
+                      // snapshot only for first stream and not level 1
                       orderBookMap.put(orderBookMapId, orderBook);
-                      return orderBook;
                     }
+                    return orderBook;
                   } else if (type.equalsIgnoreCase("delta")) {
                     return applyOrderBookDeltaSnapshot(
                         orderBookMapId, instrument, bybitOrderBooks, orderBookUpdateIdPrev.get(finalI));
