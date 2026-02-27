@@ -6,6 +6,7 @@ import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connect
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.rxjava3.disposables.Disposable;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,8 @@ import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.account.Fee;
+import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +24,7 @@ public class BybitStreamOrderBookAndFeesExample {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(BybitStreamOrderBookAndFeesExample.class);
-  static Instrument instrument = new FuturesContract("XRP/USDT/PERP");
+  static Instrument instrument = new FuturesContract("POWER/USDT/PERP");
 
   public static void main(String[] args) {
     try {
@@ -34,6 +37,30 @@ public class BybitStreamOrderBookAndFeesExample {
     exchange.disconnect().blockingAwait();
   }
 
+  public static void overlapCheck(Instant now, OrderBook orderBook, Instrument instrument, String from) {
+    if (orderBook.getAsks().get(0).getLimitPrice().doubleValue() - orderBook.getBids().get(0).getLimitPrice().doubleValue() < 0) {
+      LOG.warn("{},timestamp {}, OrderBook overlap warn,  instrument {}", from, now, instrument);
+      StringBuilder sbAsks = new StringBuilder();
+      int count = 0;
+      for (LimitOrder order : orderBook.getAsks()) {
+        sbAsks.append(count).append(": ");
+        sbAsks.append(order.getLimitPrice()).append("/").append(order.getOriginalAmount()).append(" ");
+        if (count++ > 2) {
+          break;
+        }
+      }
+      StringBuilder sbBids = new StringBuilder();
+      count = 0;
+      for (LimitOrder order : orderBook.getBids()) {
+        sbBids.append(count).append(":");
+        sbBids.append(order.getLimitPrice()).append("/").append(order.getOriginalAmount()).append(" ");
+        if (count++ > 2) {
+          break;
+        }
+      }
+      LOG.debug("ask {}, bid {}", sbAsks.toString(), sbBids.toString());
+    }
+  }
   static List<Disposable> booksDisposable = new ArrayList<>();
   static StreamingExchange exchange;
 
@@ -65,7 +92,7 @@ public class BybitStreamOrderBookAndFeesExample {
   private static void getOrderBookExample() throws InterruptedException {
     exchange = connectMainApi(BybitCategory.LINEAR, false);
     subscribeOrderBook("200,50,1");
-    Thread.sleep(3000L);
+    Thread.sleep(120000L);
     for (Disposable dis : booksDisposable) {
       dis.dispose();
     }
@@ -85,7 +112,10 @@ public class BybitStreamOrderBookAndFeesExample {
                   }
                 })
             .subscribe(
-                orderBook -> System.out.print("."),
+                orderBook -> {
+                  overlapCheck(Instant.now(), orderBook, instrument, "subscribeOrderBook");
+                  System.out.print(".");
+                },
                 throwable -> {
                   LOG.error(throwable.getMessage());
                 }));
