@@ -22,7 +22,8 @@ public final class OrderBook implements Serializable {
 
   private static final long serialVersionUID = -7788306758114464314L;
   @Getter
-  @JsonIgnore private final StampedLock lock = new StampedLock();
+  @JsonIgnore
+  public final StampedLock lock = new StampedLock();
 
   /** the asks */
   @Getter private final List<LimitOrder> asks;
