@@ -2,8 +2,6 @@ package info.bitrich.xchangestream.bybit;
 
 import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptFundingRateInterval;
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
-import static org.knowm.xchange.dto.Order.OrderType.ASK;
-import static org.knowm.xchange.dto.Order.OrderType.BID;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -81,7 +79,13 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
       depths = new ArrayList<>();
       depths.add(50);
     }
-    String orderBookMapId = ORDERBOOK + convertToBybitSymbol(instrument);
+    String orderBookMapId;
+    if (depths.get(0) == 1) { // Level 1 data, processed external
+      orderBookMapId = ORDERBOOK + "1" + convertToBybitSymbol(instrument);
+    } else // other levels merged into one here
+    {
+      orderBookMapId = ORDERBOOK + convertToBybitSymbol(instrument);
+    }
     List<Observable<OrderBook>> observableList = new ArrayList<>();
     for (int i = 0; i < depths.size(); i++) {
       orderBookUpdateIdPrev.add(new AtomicLong());
@@ -103,8 +107,8 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                         LOG.error("Failed to get orderBook, orderBookMapId= {}", orderBookMapId);
                         return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
                       }
-                      updateAsTicker(orderBook.getBids(), orderBook, bybitOrderBooks.getData().getBid().get(0), BID, instrument, new Date(bybitOrderBooks.getCts()));
-                      updateAsTicker(orderBook.getAsks(), orderBook, bybitOrderBooks.getData().getAsk().get(0), ASK, instrument, new Date(bybitOrderBooks.getCts()));
+//                      updateAsTicker(orderBook.getBids(), orderBook, bybitOrderBooks.getData().getBid().get(0), BID, instrument, new Date(bybitOrderBooks.getCts()));
+//                      updateAsTicker(orderBook.getAsks(), orderBook, bybitOrderBooks.getData().getAsk().get(0), ASK, instrument, new Date(bybitOrderBooks.getCts()));
                       return orderBook;
                     }
                     // snapshot only for first stream
@@ -115,8 +119,8 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
                       return orderBook;
                     }
                   } else if (type.equalsIgnoreCase("delta")) {
-                      return applyOrderBookDeltaSnapshot(
-                          orderBookMapId, instrument, bybitOrderBooks, orderBookUpdateIdPrev.get(finalI));
+                    return applyOrderBookDeltaSnapshot(
+                        orderBookMapId, instrument, bybitOrderBooks, orderBookUpdateIdPrev.get(finalI));
                   }
                   return new OrderBook(null, Lists.newArrayList(), Lists.newArrayList(), false);
                 } catch (IllegalStateException e) {
