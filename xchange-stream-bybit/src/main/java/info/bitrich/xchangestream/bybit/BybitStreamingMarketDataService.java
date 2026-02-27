@@ -193,6 +193,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
             if (limitOrders.get(0).getOriginalAmount().compareTo(amount) != 0) {
               limitOrders.remove(0);
               limitOrders.add(0, lo);
+              LOG.debug("updateAsTicker+, removed first: {} {} {} {} {} {}", instrument, orderType, timeStamp, amount, price, limitOrders.size());
               orderBook.updateDate(timeStamp);
             }
             break; // fully equal, skip
@@ -200,6 +201,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
           if (idx >= 1) {
             limitOrders.subList(0, idx + 1).clear();
             limitOrders.add(0, lo);
+            LOG.debug("updateAsTicker+, removed idx: {} {} {} {} {} {} {}", idx, instrument, orderType, timeStamp, amount, price, limitOrders.size());
             orderBook.updateDate(timeStamp);
             break;
           }
@@ -207,10 +209,12 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
           idx = -idx - 1;
           if (idx == 0) { //  higher than first
             limitOrders.add(0, lo);
+            LOG.debug("updateAsTicker-, added to first place: {} {} {} {} {} {}", instrument, orderType, timeStamp, amount, price, limitOrders.size());
             orderBook.updateDate(timeStamp);
           } else {
             limitOrders.subList(0, idx).clear();
             limitOrders.add(0, lo);
+            LOG.debug("updateAsTicker-, removed idx: {} {} {} {} {} {} {}", idx - 1, instrument, orderType, timeStamp, amount, price, limitOrders.size());
             orderBook.updateDate(timeStamp);
           }
           break;
