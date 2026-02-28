@@ -73,7 +73,7 @@ public class BinanceStreamingAccountService implements StreamingAccountService {
    */
   public void openSubscriptions() {
     if (isFuture) {
-      if (binanceUserDataFutureStreamingService != null) {
+      if (binanceUserDataFutureStreamingService == null) {
         return;
       }
       accountInfo =
@@ -87,18 +87,17 @@ public class BinanceStreamingAccountService implements StreamingAccountService {
                           || accountInfoLast.getValue().getEventTime().before(m.getEventTime()))
               .subscribe(accountInfoPublisher::onNext);
     } else if (binanceUserDataSpotStreamingService != null) {
-      return;
+      accountInfo =
+          binanceUserDataSpotStreamingService
+              .subscribeChannel(
+                  BaseBinanceWebSocketTransaction.BinanceWebSocketTypes.OUTBOUND_ACCOUNT_POSITION)
+              .map(this::accountInfo)
+              .filter(
+                  m ->
+                      accountInfoLast.getValue() == null
+                          || accountInfoLast.getValue().getEventTime().before(m.getEventTime()))
+              .subscribe(accountInfoPublisher::onNext);
     }
-    accountInfo =
-        binanceUserDataSpotStreamingService
-            .subscribeChannel(
-                BaseBinanceWebSocketTransaction.BinanceWebSocketTypes.OUTBOUND_ACCOUNT_POSITION)
-            .map(this::accountInfo)
-            .filter(
-                m ->
-                    accountInfoLast.getValue() == null
-                        || accountInfoLast.getValue().getEventTime().before(m.getEventTime()))
-            .subscribe(accountInfoPublisher::onNext);
   }
 
   /**
