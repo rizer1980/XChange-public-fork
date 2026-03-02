@@ -217,7 +217,7 @@ public interface MarketDataService extends BaseService {
   /**
    * Get the CandleStickData for given currency between startDate to endDate.
    *
-   * @param Instrument Instrument.
+   * @param instrument instrument.
    * @param params     Params for query, including start(e.g. march 2022.) and end date, period etc.,
    * @return The CandleStickData, null if some sort of error occurred. Implementers should log the error.
    * @throws ExchangeException                     - Indication that the exchange reported some kind of error with the request or response
@@ -226,7 +226,7 @@ public interface MarketDataService extends BaseService {
    * @throws IOException                           - Indication that a networking error occurred while fetching JSON data
    */
   default CandleStickData getCandleStickData(
-      Instrument Instrument, CandleStickDataParams params) throws IOException {
+      Instrument instrument, CandleStickDataParams params) throws IOException {
     throw new NotYetImplementedForExchangeException("getCandleStickData");
   }
 
