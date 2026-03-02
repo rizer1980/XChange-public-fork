@@ -9,8 +9,10 @@ import org.junit.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.service.marketdata.MarketDataService;
+import org.knowm.xchange.service.trade.params.DefaultCandleStickParam;
 
 public class BybitMarketDataServiceTest extends BaseWiremockTest {
 
@@ -64,5 +66,32 @@ public class BybitMarketDataServiceTest extends BaseWiremockTest {
     assertThat(ticker.getBidSize()).isEqualTo(new BigDecimal("2"));
     assertThat(ticker.getAskSize()).isEqualTo(new BigDecimal("1.862172"));
     assertThat(ticker.getPercentageChange()).isEqualTo(new BigDecimal("0.0068"));
+  }
+
+  @Test
+  public void testGetCandleStickData() throws Exception {
+    initGetStub("/v5/market/kline", "/getKlines.json5");
+
+    CandleStickData candleStickData =
+        marketDataService
+            .getCandleStickData(
+                CurrencyPair.BTC_USDT, new DefaultCandleStickParam(new Date(1670601600000L), new Date(1670608800000L), 60));
+
+    assertThat(candleStickData.getInstrument().toString()).isEqualTo("BTC/USDT");
+    assertThat(candleStickData.getCandleSticks()).hasSize(3);
+    assertThat(candleStickData.getCandleSticks().get(0).getTimestamp())
+        .isEqualTo(new Date(1670608800000L));
+    assertThat(candleStickData.getCandleSticks().get(0).getOpen())
+        .isEqualTo(new BigDecimal("17071"));
+    assertThat(candleStickData.getCandleSticks().get(0).getHigh())
+        .isEqualTo(new BigDecimal("17073"));
+    assertThat(candleStickData.getCandleSticks().get(0).getLow())
+        .isEqualTo(new BigDecimal("17027"));
+    assertThat(candleStickData.getCandleSticks().get(0).getClose())
+        .isEqualTo(new BigDecimal("17055.5"));
+    assertThat(candleStickData.getCandleSticks().get(0).getVolume())
+        .isEqualTo(new BigDecimal("268611"));
+    assertThat(candleStickData.getCandleSticks().get(0).getQuotaVolume())
+        .isEqualTo(new BigDecimal("15.74462667"));
   }
 }

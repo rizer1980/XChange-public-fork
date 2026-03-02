@@ -22,6 +22,8 @@ import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinBalance;
 import org.knowm.xchange.bybit.dto.account.allcoins.BybitAllCoinsBalance;
 import org.knowm.xchange.bybit.dto.account.walletbalance.BybitCoinWalletBalance;
+import org.knowm.xchange.bybit.dto.marketdata.BybitKline;
+import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.linear.BybitLinearInverseInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.option.BybitOptionInstrumentInfo;
@@ -49,6 +51,8 @@ import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Wallet;
+import org.knowm.xchange.dto.marketdata.CandleStick;
+import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Ticker.Builder;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
@@ -567,5 +571,28 @@ public class BybitAdapters {
         null,
         null,
         null);
+  }
+
+  public static CandleStickData adaptCandleStickData(
+      BybitKlines bybitKlines, BybitCategory category) {
+    Instrument instrument =
+        convertBybitSymbolToInstrument(bybitKlines.getSymbol(), category);
+    List<CandleStick> candleSticks = new ArrayList<>();
+    for (BybitKline bybitKline : bybitKlines.getList()) {
+      candleSticks.add(adaptBybitKline(bybitKline));
+    }
+    return new CandleStickData(instrument, candleSticks);
+  }
+
+  private static CandleStick adaptBybitKline(BybitKline bybitKline) {
+    return new CandleStick.Builder()
+        .timestamp(new Date(Long.parseLong(bybitKline.getStartTime())))
+        .open(new BigDecimal(bybitKline.getOpenPrice()))
+        .high(new BigDecimal(bybitKline.getHighPrice()))
+        .low(new BigDecimal(bybitKline.getLowPrice()))
+        .close(new BigDecimal(bybitKline.getClosePrice()))
+        .volume(new BigDecimal(bybitKline.getVolume()))
+        .quotaVolume(new BigDecimal(bybitKline.getTurnover()))
+        .build();
   }
 }

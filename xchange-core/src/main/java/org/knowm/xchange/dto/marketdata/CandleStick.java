@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import java.math.BigDecimal;
 import java.util.Date;
+import lombok.ToString;
 
 /** Data object representing a CandleStick */
 @JsonDeserialize(builder = CandleStick.Builder.class)
+@ToString
 public class CandleStick {
 
   private final BigDecimal open;
