@@ -11,6 +11,7 @@ import org.knowm.xchange.dto.marketdata.CandleStick;
 import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.trade.params.DefaultCandleStickParam;
+import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
 
 public class BybitGetCandlesHistoryExample {
 
@@ -38,5 +39,11 @@ public class BybitGetCandlesHistoryExample {
     for (CandleStick candleStick : candleStickData.getCandleSticks()) {
       System.out.println(candleStick);
     }
+    startTime = endTime - (24 * 10 * 60 * 60 * 1000); // 10 days, 240 bars
+    DefaultCandleStickParamWithLimit paramsWithLimit =
+        new DefaultCandleStickParamWithLimit(new Date(startTime), new Date(endTime), periodInSecs, 240);
+    candleStickData =
+        marketDataService.getCandleStickData(CurrencyPair.BTC_USDT, paramsWithLimit);
+    System.out.println("response size: " + candleStickData.getCandleSticks().size());
   }
 }

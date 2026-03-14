@@ -22,6 +22,7 @@ import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
 import org.knowm.xchange.service.trade.params.CandleStickDataParams;
 import org.knowm.xchange.service.trade.params.DefaultCandleStickParam;
+import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
 import org.knowm.xchange.utils.Assert;
 
 public class BybitMarketDataService extends BybitMarketDataServiceRaw implements MarketDataService {
@@ -114,26 +115,42 @@ public class BybitMarketDataService extends BybitMarketDataServiceRaw implements
 
   public CandleStickData getCandleStickData(Instrument instrument, CandleStickDataParams params)
       throws IOException {
-    Assert.isTrue(
-        params instanceof DefaultCandleStickParam, "DefaultCandleStickParam is required");
-
-    DefaultCandleStickParam defaultParams = (DefaultCandleStickParam) params;
+    String interval;
+    Long start;
+    Long end;
+    Integer limit = null;
+    if (params instanceof DefaultCandleStickParamWithLimit) {
+      DefaultCandleStickParamWithLimit checkedParams = (DefaultCandleStickParamWithLimit) params;
+      start =
+          checkedParams.getStartDate() == null ? null : checkedParams.getStartDate().getTime();
+      end = checkedParams.getEndDate() == null ? null : checkedParams.getEndDate().getTime();
+      interval = String.valueOf(checkedParams.getPeriodInSecs() / 60);
+      if (checkedParams.getPeriodInSecs() == 86400) {
+        interval = "D";
+      } else if (checkedParams.getPeriodInSecs() == 604800) {
+        interval = "W";
+      } else if (checkedParams.getPeriodInSecs() == 2592000) {
+        interval = "M";
+      }
+      limit = checkedParams.getLimit();
+    } else if (params instanceof DefaultCandleStickParam) {
+      DefaultCandleStickParam checkedParams = (DefaultCandleStickParam) params;
+      start =
+          checkedParams.getStartDate() == null ? null : checkedParams.getStartDate().getTime();
+      end = checkedParams.getEndDate() == null ? null : checkedParams.getEndDate().getTime();
+      interval = String.valueOf(checkedParams.getPeriodInSecs() / 60);
+      if (checkedParams.getPeriodInSecs() == 86400) {
+        interval = "D";
+      } else if (checkedParams.getPeriodInSecs() == 604800) {
+        interval = "W";
+      } else if (checkedParams.getPeriodInSecs() == 2592000) {
+        interval = "M";
+      }
+    } else {
+      throw new IllegalArgumentException("CandleStickDataParams must be DefaultCandleStickParam or DefaultCandleStickParamWithLimit");
+    }
     BybitCategory category = BybitAdapters.getCategory(instrument);
     String symbol = BybitAdapters.convertToBybitSymbol(instrument);
-
-    String interval = String.valueOf(defaultParams.getPeriodInSecs() / 60);
-    if (defaultParams.getPeriodInSecs() == 86400) {
-      interval = "D";
-    } else if (defaultParams.getPeriodInSecs() == 604800) {
-      interval = "W";
-    } else if (defaultParams.getPeriodInSecs() == 2592000) {
-      interval = "M";
-    }
-
-    Long start =
-        defaultParams.getStartDate() == null ? null : defaultParams.getStartDate().getTime();
-    Long end = defaultParams.getEndDate() == null ? null : defaultParams.getEndDate().getTime();
-
-    return getCandleStickDataRaw(category, symbol, interval, start, end, null);
+    return getCandleStickDataRaw(category, symbol, interval, start, end, limit);
   }
 }
