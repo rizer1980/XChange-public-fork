@@ -25,6 +25,7 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
+import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.okex.service.OkexMarketDataService;
 
 public class OkexPublicDataIntegration {
@@ -143,5 +144,16 @@ public class OkexPublicDataIntegration {
         .isEqualTo(new CurrencyPair("BTC/USDT"));
     assertThat(OkexAdapters.adaptInstrument(new CurrencyPair("BTC/USDT"))).isEqualTo("BTC-USDT");
     assertThat(OkexAdapters.adaptInstrument(new CurrencyPair("BTC/USDC"))).isEqualTo("BTC-USD");
+  }
+
+  @Test
+  public void testFundingRateHistory() {
+    try {
+      List<OkxFundingRateHistory> fundingRateHistory = ((OkexMarketDataService) exchange.getMarketDataService()).getFundingRateHistory(instrument, null, null, null);
+      System.out.println(fundingRateHistory);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
   }
 }
