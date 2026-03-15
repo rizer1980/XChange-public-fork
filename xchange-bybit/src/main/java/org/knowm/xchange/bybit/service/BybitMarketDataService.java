@@ -7,6 +7,8 @@ import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.BybitResult;
+import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistory;
+import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistoryRaw;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTickers;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
@@ -152,5 +154,16 @@ public class BybitMarketDataService extends BybitMarketDataServiceRaw implements
     BybitCategory category = BybitAdapters.getCategory(instrument);
     String symbol = BybitAdapters.convertToBybitSymbol(instrument);
     return getCandleStickDataRaw(category, symbol, interval, start, end, limit);
+  }
+
+  public List<BybitFundingRateHistory> getFundingRateHistory(Instrument instrument, Long startTime, Long endTime, Integer limit) throws IOException {
+    BybitCategory category = BybitAdapters.getCategory(instrument);
+    List<BybitFundingRateHistoryRaw> raw = getFundingRateHistoryRaw(instrument, startTime, endTime, limit);
+    List<BybitFundingRateHistory> result = new ArrayList<>();
+    for (BybitFundingRateHistoryRaw entry : raw) {
+      Instrument converted = BybitAdapters.convertBybitSymbolToInstrument(entry.getInstrument(), category);
+      result.add(new BybitFundingRateHistory(converted, entry.getFundingRate(), entry.getFundingRateTimestamp()));
+    }
+    return result;
   }
 }

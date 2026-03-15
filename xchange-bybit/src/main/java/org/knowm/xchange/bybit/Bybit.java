@@ -6,9 +6,11 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
+import org.knowm.xchange.bybit.dto.BybitCategorizedPayload;
 import org.knowm.xchange.bybit.dto.BybitResult;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKline;
 import org.knowm.xchange.bybit.dto.marketdata.BybitKlines;
+import org.knowm.xchange.bybit.dto.marketdata.BybitFundingRateHistoryRaw;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentsInfo;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTicker;
@@ -56,6 +58,18 @@ public interface Bybit {
       @QueryParam("interval") String interval,
       @QueryParam("start") Long start,
       @QueryParam("end") Long end,
+      @QueryParam("limit") Integer limit)
+      throws IOException, BybitException;
+
+  /**
+   * @apiSpec <a href="https://bybit-exchange.github.io/docs/v5/market/history-fund-rate">API</a>
+   */
+  @GET
+  @Path("/funding/history")
+  BybitResult<BybitCategorizedPayload<BybitFundingRateHistoryRaw>> getFundingHistory(@QueryParam("category") String category,
+      @QueryParam("symbol") String symbol,
+      @QueryParam("startTime") Long startTime,
+      @QueryParam("endTime") Long endTime,
       @QueryParam("limit") Integer limit)
       throws IOException, BybitException;
 }

@@ -20,6 +20,7 @@ import org.knowm.xchange.okex.dto.marketdata.OkexInstrument;
 import org.knowm.xchange.okex.dto.marketdata.OkexOrderbook;
 import org.knowm.xchange.okex.dto.marketdata.OkexTicker;
 import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
+import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
 
 @Path("/api/v5")
 @Produces(APPLICATION_JSON)
@@ -28,6 +29,7 @@ public interface Okex {
   String tickerPath = "/market/ticker"; // Stated as 20 req/2 sec
   String tickersPath = "/market/tickers"; // Stated as 20 req/2 sec
   String candlesHistoryPath = "/market/history-candles"; // Stated as 20 req/2 sec
+  String fundingRateHistoryPath = "/public/funding-rate-history"; // Stated as 10 req/2 sec
 
   // To avoid 429s, actual req/second may need to be lowered!
   Map<String, List<Integer>> publicPathRateLimits =
@@ -37,6 +39,7 @@ public interface Okex {
           put(tickerPath, Arrays.asList(8, 1));
           put(tickersPath, Arrays.asList(8, 1));
           put(candlesHistoryPath, Arrays.asList(8, 1));
+          put(fundingRateHistoryPath, Arrays.asList(4, 1));
         }
       };
 
@@ -58,14 +61,14 @@ public interface Okex {
       throws IOException, OkexException;
 
   @GET
-  @Path("/market/ticker")
+  @Path(tickerPath)
   OkexResponse<List<OkexTicker>> getTicker(
       @QueryParam("instId") String instrument,
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
       throws IOException, OkexException;
 
   @GET
-  @Path("/market/tickers")
+  @Path(tickersPath)
   OkexResponse<List<OkexTicker>> getTickers(
       @QueryParam("instType") String instType,
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
@@ -105,6 +108,16 @@ public interface Okex {
       @QueryParam("before") String before,
       @QueryParam("bar") String bar,
       @QueryParam("limit") String limit,
+      @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
+      throws IOException, OkexException;
+
+  @GET
+  @Path(fundingRateHistoryPath)
+  OkexResponse<List<OkxFundingRateHistory>> getFundingRateHistory(
+      @QueryParam("instId") String instrument,
+      @QueryParam("after") Long after,
+      @QueryParam("before") Long before,
+      @QueryParam("limit") Integer limit,
       @HeaderParam("X-SIMULATED-TRADING") String simulatedTrading)
       throws IOException, OkexException;
 }

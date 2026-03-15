@@ -18,6 +18,7 @@ import org.knowm.xchange.okex.OkexExchange;
 import org.knowm.xchange.okex.dto.OkexInstType;
 import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
+import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
 import org.knowm.xchange.service.trade.params.CandleStickDataParams;
@@ -103,5 +104,9 @@ public class OkexMarketDataService extends OkexMarketDataServiceRaw implements M
     return getOkexTickers(instType).getData().stream()
         .map(OkexAdapters::adaptTicker)
         .collect(Collectors.toList());
+  }
+
+  public List<OkxFundingRateHistory> getFundingRateHistory(Instrument instrument, Long startTime, Long endTime, Integer limit) throws IOException {
+    return getOkxFundingRateHistoryRaw(OkexAdapters.adaptInstrument(instrument), startTime, endTime, limit);
   }
 }
