@@ -2,6 +2,7 @@ package org.knowm.xchange.bybit.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import org.knowm.xchange.bybit.BybitAdapters;
 import org.knowm.xchange.bybit.BybitExchange;
@@ -164,6 +165,8 @@ public class BybitMarketDataService extends BybitMarketDataServiceRaw implements
       Instrument converted = BybitAdapters.convertBybitSymbolToInstrument(entry.getInstrument(), category);
       result.add(new BybitFundingRateHistory(converted, entry.getFundingRate(), entry.getFundingRateTimestamp()));
     }
+    // sort, oldest first
+    result.sort(Comparator.comparingLong(s -> s.getFundingRateTimestamp().toEpochMilli()));
     return result;
   }
 }
