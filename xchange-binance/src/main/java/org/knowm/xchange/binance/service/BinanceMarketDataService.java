@@ -151,7 +151,7 @@ public class BinanceMarketDataService extends BinanceMarketDataServiceRaw
     }
   }
 
-  public List<BinanceFundingRateHistory> fundingRateHistory(Instrument instrument, Long startTime, Long endTime, Integer limit) throws IOException {
+  public List<BinanceFundingRateHistory> getFundingRateHistory(Instrument instrument, Long startTime, Long endTime, Integer limit) throws IOException {
     return fundingRateHistoryRaw(instrument, startTime, endTime, limit);
   }
 
