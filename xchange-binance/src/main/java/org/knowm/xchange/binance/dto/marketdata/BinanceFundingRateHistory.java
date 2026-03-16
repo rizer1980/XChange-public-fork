@@ -2,7 +2,7 @@ package org.knowm.xchange.binance.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.ToString;
 import org.knowm.xchange.binance.BinanceAdapters;
@@ -14,7 +14,7 @@ public class BinanceFundingRateHistory {
 
   private final Instrument instrument;
   private final BigDecimal fundingRate;
-  private final Date fundingTime;
+  private final Instant fundingTime;
   private final BigDecimal markPrice;
 
   public BinanceFundingRateHistory(
@@ -24,7 +24,7 @@ public class BinanceFundingRateHistory {
       @JsonProperty("markPrice") BigDecimal markPrice) {
     this.instrument = BinanceAdapters.adaptSymbol(symbol, true);
     this.fundingRate = fundingRate;
-    this.fundingTime = new Date(fundingTime);
+    this.fundingTime = Instant.ofEpochMilli(fundingTime);
     this.markPrice = markPrice;
   }
 }
