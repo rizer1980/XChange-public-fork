@@ -90,7 +90,7 @@ public class BinanceFutureTest {
         .getFundingRates()
         .forEach(fundingRate -> System.out.println(fundingRate.toString()));
     List<BinanceFundingRateHistory> fundingRateHistory = ((BinanceMarketDataService) binanceExchange.getMarketDataService())
-        .fundingRateHistory(instrument, System.currentTimeMillis() - 24 * 60 * 60 * 1000, System.currentTimeMillis(), null);
+        .getFundingRateHistory(instrument, System.currentTimeMillis() - 24 * 60 * 60 * 1000, System.currentTimeMillis(), null);
     fundingRateHistory.forEach(fundingRate -> System.out.println(fundingRate.toString()));
   }
 
