@@ -15,14 +15,14 @@ public class OkxFundingRateHistory {
   private final String instType;
   private final Instrument instrument;
   private final BigDecimal predictedFundingRate;
-  private final String fundingRate;
+  private final BigDecimal fundingRate;
   private final Instant fundingTime;
   private final String method;
 
   public OkxFundingRateHistory(@JsonProperty("instType") String instType,
       @JsonProperty("instId") String instrument,
       @JsonProperty("fundingRate") BigDecimal predictedFundingRate,
-      @JsonProperty("realizedRate") String fundingRate,
+      @JsonProperty("realizedRate") BigDecimal fundingRate,
       @JsonProperty("fundingTime") long fundingTime,
       @JsonProperty("method") String method) {
     this.instType = instType;
