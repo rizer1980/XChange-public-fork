@@ -23,7 +23,9 @@ import org.knowm.xchange.okex.dto.marketdata.OkexTrade;
 import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.utils.DateUtils;
 
-/** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
+/**
+ * Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021
+ */
 public class OkexMarketDataServiceRaw extends OkexBaseService {
 
   public OkexMarketDataServiceRaw(
@@ -183,8 +185,8 @@ public class OkexMarketDataServiceRaw extends OkexBaseService {
         () ->
             okex.getFundingRateHistory(
                 instrument,
-                startTime,
                 endTime,
+                startTime,
                 limit,
                 (String)
                     exchange.getExchangeSpecification().getExchangeSpecificParametersItem(PARAM_SIMULATED)).getData()).

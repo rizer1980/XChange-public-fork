@@ -158,7 +158,8 @@ public class OkexPublicDataIntegration {
   @Test
   public void testFundingRateHistory() {
     try {
-      List<OkxFundingRateHistory> fundingRateHistory = ((OkexMarketDataService) exchange.getMarketDataService()).getFundingRateHistory(instrument, null, null, null);
+      List<OkxFundingRateHistory> fundingRateHistory = ((OkexMarketDataService) exchange.getMarketDataService()).getFundingRateHistory(instrument, System.currentTimeMillis() - 24 * 60 * 60 * 1000,
+          System.currentTimeMillis(), null);
       System.out.println(fundingRateHistory);
     } catch (IOException e) {
       throw new RuntimeException(e);
