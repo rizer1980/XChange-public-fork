@@ -30,12 +30,10 @@ public class BinanceStreamingAccountService implements StreamingAccountService {
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
 
   public BinanceStreamingAccountService(
-      BinanceUserDataFutureStreamingService binanceUserDataFutureStreamingService, BinanceUserDataSpotStreamingService binanceUserDataSpotStreamingService) {
+      BinanceUserDataFutureStreamingService binanceUserDataFutureStreamingService, BinanceUserDataSpotStreamingService binanceUserDataSpotStreamingService, boolean isFuture) {
     this.binanceUserDataFutureStreamingService = binanceUserDataFutureStreamingService;
     this.binanceUserDataSpotStreamingService = binanceUserDataSpotStreamingService;
-    if (binanceUserDataFutureStreamingService != null) {
-      isFuture = true;
-    }
+    this.isFuture = isFuture;
   }
 
   public Observable<OutboundAccountPositionBinanceWebsocketTransaction> getRawAccountInfo() {

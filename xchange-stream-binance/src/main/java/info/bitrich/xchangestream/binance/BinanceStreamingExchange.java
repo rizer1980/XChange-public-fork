@@ -154,7 +154,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
             orderBookUpdateFrequencyParameter,
             realtimeOrderBookTicker,
             oderBookFetchLimitParameter);
-    streamingAccountService = new BinanceStreamingAccountService(userDataFutureStreamingService, userDataSpotStreamingService);
+    streamingAccountService = new BinanceStreamingAccountService(userDataFutureStreamingService, userDataSpotStreamingService, isFuturesEnabled());
     streamingTradeService =
         new BinanceStreamingTradeService(
             this, userDataFutureStreamingService, userDataSpotStreamingService, userTradeStreamingService, getResilienceRegistries());
