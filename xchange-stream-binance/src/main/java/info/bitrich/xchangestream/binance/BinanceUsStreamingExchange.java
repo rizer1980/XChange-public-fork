@@ -168,7 +168,7 @@ public class BinanceUsStreamingExchange extends BinanceUsExchange implements Str
             orderBookUpdateFrequencyParameter,
             realtimeOrderBookTicker,
             oderBookFetchLimitParameter);
-    streamingAccountService = new BinanceStreamingAccountService(userDataFutureStreamingService, userDataSpotStreamingService);
+    streamingAccountService = new BinanceStreamingAccountService(userDataFutureStreamingService, userDataSpotStreamingService, isFuturesEnabled());
     streamingTradeService =
         new BinanceStreamingTradeService(
             this, userDataFutureStreamingService, userDataSpotStreamingService, userTradeStreamingService, getResilienceRegistries());
