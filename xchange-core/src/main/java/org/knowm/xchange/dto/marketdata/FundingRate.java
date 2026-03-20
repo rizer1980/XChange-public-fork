@@ -110,6 +110,7 @@ public class FundingRate {
     H2(2),
     H4(4),
     H6(6),
+    H7(7),
     H8(8);
     private final int hours;
 
