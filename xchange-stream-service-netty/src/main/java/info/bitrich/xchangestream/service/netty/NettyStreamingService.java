@@ -10,9 +10,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.IoEventLoopGroup;
-import io.netty.channel.SingleThreadIoEventLoop;
-import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -52,7 +50,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -93,8 +90,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
   private final Duration retryDuration;
   private final Duration connectionTimeout;
   private final int idleTimeoutSeconds;
-  //  private volatile MultiThreadIoEventLoopGroup eventLoopGroup;
-  private volatile IoEventLoopGroup group;
+  private volatile NioEventLoopGroup eventLoopGroup;
   protected final Map<String, Subscription> channels = new ConcurrentHashMap<>();
   private boolean compressedMessages = false;
 
@@ -200,15 +196,13 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                             maxFramePayloadLength),
                         this::messageHandler);
 
-                if (group == null || group.isShutdown()) {
-//                  eventLoopGroup = new MultiThreadIoEventLoopGroup(2,NioIoHandler.newFactory());
-                  group = new SingleThreadIoEventLoop(null,
-                      Executors.defaultThreadFactory(), NioIoHandler.newFactory());
+                if (eventLoopGroup == null || eventLoopGroup.isShutdown()) {
+                  eventLoopGroup = new NioEventLoopGroup(2);
                 }
 
                 Bootstrap bootstrap =
                     new Bootstrap()
-                        .group(group)
+                        .group(eventLoopGroup)
                         .option(
                             ChannelOption.CONNECT_TIMEOUT_MILLIS,
                             Math.toIntExact(connectionTimeout.toMillis()))
@@ -332,7 +326,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                 .addListener(
                     future -> {
                       channels.clear();
-                      group
+                      eventLoopGroup
                           .shutdownGracefully(2, idleTimeoutSeconds, TimeUnit.SECONDS)
                           .addListener(
                               f -> {
@@ -344,7 +338,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                     });
           } else if (webSocketChannel != null) { // web socket is closed already
             channels.clear();
-            group
+            eventLoopGroup
                 .shutdownGracefully(2, idleTimeoutSeconds, TimeUnit.SECONDS)
                 .addListener(
                     f -> {
