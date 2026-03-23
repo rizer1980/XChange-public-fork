@@ -10,7 +10,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -90,7 +91,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
   private final Duration retryDuration;
   private final Duration connectionTimeout;
   private final int idleTimeoutSeconds;
-  private volatile NioEventLoopGroup eventLoopGroup;
+  private volatile MultiThreadIoEventLoopGroup eventLoopGroup;
   protected final Map<String, Subscription> channels = new ConcurrentHashMap<>();
   private boolean compressedMessages = false;
 
@@ -197,7 +198,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                         this::messageHandler);
 
                 if (eventLoopGroup == null || eventLoopGroup.isShutdown()) {
-                  eventLoopGroup = new NioEventLoopGroup(2);
+                  eventLoopGroup = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
                 }
 
                 Bootstrap bootstrap =
