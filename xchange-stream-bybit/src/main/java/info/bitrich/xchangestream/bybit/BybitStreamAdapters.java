@@ -30,6 +30,7 @@ import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPosition.Type;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.marketdata.FundingRate;
+import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.FundingRate.FundingRateInterval;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trade;
@@ -323,6 +324,27 @@ public class BybitStreamAdapters {
               null));
     }
     return new BybitStreamBatchAmendOrdersPayload(category, ordersPayload);
+  }
+
+  public static Ticker adaptTicker(BybitLinearInverseTicker bybitTicker) {
+    Instrument instrument =
+        convertBybitSymbolToInstrument(bybitTicker.getSymbol(), BybitCategory.LINEAR);
+    return new Ticker.Builder()
+        .instrument(instrument)
+        .last(bybitTicker.getLastPrice())
+        .bid(bybitTicker.getBid1Price())
+        .bidSize(bybitTicker.getBid1Size())
+        .ask(bybitTicker.getAsk1Price())
+        .askSize(bybitTicker.getAsk1Size())
+        .high(bybitTicker.getHighPrice24h())
+        .low(bybitTicker.getLowPrice24h())
+        .volume(bybitTicker.getVolume24h())
+        .quoteVolume(bybitTicker.getTurnover24h())
+        .percentageChange(bybitTicker.getPrice24hPcnt() != null
+            ? bybitTicker.getPrice24hPcnt().multiply(BigDecimal.valueOf(100))
+            : null)
+        .timestamp(new Date())
+        .build();
   }
 
   public static FundingRate adaptFundingRate(BybitLinearInverseTicker bybitTicker) {
