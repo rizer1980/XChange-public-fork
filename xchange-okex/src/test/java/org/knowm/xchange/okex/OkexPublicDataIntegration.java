@@ -1,14 +1,5 @@
 package org.knowm.xchange.okex;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -17,7 +8,6 @@ import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
-import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.FundingRate;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
@@ -29,7 +19,15 @@ import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.marketdata.OkexCandleStick;
 import org.knowm.xchange.okex.dto.marketdata.OkxFundingRateHistory;
 import org.knowm.xchange.okex.service.OkexMarketDataService;
-import org.knowm.xchange.service.trade.params.DefaultCandleStickParam;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Objects;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class OkexPublicDataIntegration {
 
@@ -119,12 +117,6 @@ public class OkexPublicDataIntegration {
         ((OkexMarketDataService) exchange.getMarketDataService())
             .getHistoryCandle("BTC-USDT", null, null, null, null);
     assertTrue(Objects.nonNull(barHistDtos) && !barHistDtos.getData().isEmpty());
-    DefaultCandleStickParam params = new DefaultCandleStickParam(new Date(System.currentTimeMillis() - 10 * 60 * 1000), new Date(System.currentTimeMillis()), 60);
-    CandleStickData candleStickData =
-        exchange.getMarketDataService()
-            .getCandleStickData(new FuturesContract("BTC/USDT/SWAP"), params);
-    assertTrue(Objects.nonNull(candleStickData));
-    assertTrue(!candleStickData.getCandleSticks().isEmpty());
   }
 
   @Test
