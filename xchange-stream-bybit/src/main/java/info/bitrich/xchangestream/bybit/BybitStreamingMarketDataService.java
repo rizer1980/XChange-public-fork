@@ -32,6 +32,7 @@ import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.FundingRate;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
+import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.instrument.Instrument;
@@ -52,6 +53,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
       orderBookUpdatesSubscriptions;
 
   private final Map<String, FundingRate> fundingRateMap = new HashMap<>();
+  private final Map<String, BybitLinearInverseTicker> tickerSnapshotMap = new HashMap<>();
 
   public BybitStreamingMarketDataService(BybitStreamingService streamingService) {
     this.streamingService = streamingService;
@@ -326,6 +328,76 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
               return Observable.fromIterable(
                   BybitStreamAdapters.adaptTrades(bybitTradeList, instrument).getTrades());
             });
+  }
+
+  @Override
+  public Observable<Ticker> getTicker(Instrument instrument, Object... args) {
+    String channelUniqueId = TICKER + convertToBybitSymbol(instrument);
+    return streamingService
+        .subscribeChannel(channelUniqueId)
+        .map(
+            jsonNode -> {
+              BybitResponse<BybitLinearInverseTicker> bybitTicker =
+                  mapper.treeToValue(jsonNode, new TypeReference<>() {
+                  });
+              String type = bybitTicker.getType();
+              if (type.equalsIgnoreCase("snapshot")) {
+                tickerSnapshotMap.put(channelUniqueId, bybitTicker.getData());
+                return BybitStreamAdapters.adaptTicker(bybitTicker.getData());
+              } else if (type.equalsIgnoreCase("delta")) {
+                return applyTickerDelta(channelUniqueId, bybitTicker.getData());
+              }
+              return null;
+            })
+        .filter(ticker -> ticker != null);
+  }
+
+  private Ticker applyTickerDelta(
+      String channelUniqueId, BybitLinearInverseTicker delta) {
+    BybitLinearInverseTicker snapshot = tickerSnapshotMap.getOrDefault(channelUniqueId, null);
+    if (snapshot == null) {
+      LOG.error("Failed to get ticker snapshot, channelUniqueId= {}", channelUniqueId);
+      return null;
+    }
+    // Bybit deltas only contain changed fields; rebuild snapshot merging delta values
+    BybitLinearInverseTicker merged = BybitLinearInverseTicker.builder()
+        .symbol(snapshot.getSymbol())
+        .lastPrice(coalesce(delta.getLastPrice(), snapshot.getLastPrice()))
+        .bid1Price(coalesce(delta.getBid1Price(), snapshot.getBid1Price()))
+        .bid1Size(coalesce(delta.getBid1Size(), snapshot.getBid1Size()))
+        .ask1Price(coalesce(delta.getAsk1Price(), snapshot.getAsk1Price()))
+        .ask1Size(coalesce(delta.getAsk1Size(), snapshot.getAsk1Size()))
+        .highPrice24h(coalesce(delta.getHighPrice24h(), snapshot.getHighPrice24h()))
+        .lowPrice24h(coalesce(delta.getLowPrice24h(), snapshot.getLowPrice24h()))
+        .volume24h(coalesce(delta.getVolume24h(), snapshot.getVolume24h()))
+        .turnover24h(coalesce(delta.getTurnover24h(), snapshot.getTurnover24h()))
+        .price24hPcnt(coalesce(delta.getPrice24hPcnt(), snapshot.getPrice24hPcnt()))
+        .indexPrice(coalesce(delta.getIndexPrice(), snapshot.getIndexPrice()))
+        .markPrice(coalesce(delta.getMarkPrice(), snapshot.getMarkPrice()))
+        .prevPrice1h(coalesce(delta.getPrevPrice1h(), snapshot.getPrevPrice1h()))
+        .prevPrice24h(coalesce(delta.getPrevPrice24h(), snapshot.getPrevPrice24h()))
+        .openInterest(coalesce(delta.getOpenInterest(), snapshot.getOpenInterest()))
+        .openInterestValue(coalesce(delta.getOpenInterestValue(), snapshot.getOpenInterestValue()))
+        .fundingRate(coalesce(delta.getFundingRate(), snapshot.getFundingRate()))
+        .nextFundingTime(delta.getNextFundingTime() != null
+            ? delta.getNextFundingTime() : snapshot.getNextFundingTime())
+        .fundingIntervalHour(delta.getFundingIntervalHour() != null
+            ? delta.getFundingIntervalHour() : snapshot.getFundingIntervalHour())
+        .predictedDeliveryPrice(coalesce(delta.getPredictedDeliveryPrice(), snapshot.getPredictedDeliveryPrice()))
+        .basisRate(coalesce(delta.getBasisRate(), snapshot.getBasisRate()))
+        .basis(coalesce(delta.getBasis(), snapshot.getBasis()))
+        .deliveryFeeRate(coalesce(delta.getDeliveryFeeRate(), snapshot.getDeliveryFeeRate()))
+        .deliveryTime(delta.getDeliveryTime() != null
+            ? delta.getDeliveryTime() : snapshot.getDeliveryTime())
+        .fundingCap(delta.getFundingCap() != null
+            ? delta.getFundingCap() : snapshot.getFundingCap())
+        .build();
+    tickerSnapshotMap.put(channelUniqueId, merged);
+    return BybitStreamAdapters.adaptTicker(merged);
+  }
+
+  private static <T> T coalesce(T a, T b) {
+    return a != null ? a : b;
   }
 
   @Override
