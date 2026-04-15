@@ -1,32 +1,12 @@
 package info.bitrich.xchangestream.bybit;
 
-import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptComplexOrdersChanges;
-import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptOrderBook;
-import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptOrdersChanges;
-import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptTicker;
-import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptTrades;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.knowm.xchange.bybit.dto.BybitCategory.OPTION;
-import static org.knowm.xchange.bybit.dto.trade.BybitOrderType.MARKET;
-import static org.knowm.xchange.bybit.dto.trade.details.BybitTimeInForce.IOC;
-import static org.knowm.xchange.dto.Order.OrderStatus.FILLED;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dto.BybitResponse;
-import dto.marketdata.BybitOrderbook;
-import dto.trade.BybitComplexOrderChanges;
-import dto.trade.BybitComplexPositionChanges;
-import dto.trade.BybitOrderChangesResponse;
-import dto.trade.BybitPositionChangesResponse;
-import dto.trade.BybitTrade;
+import info.bitrich.xchangestream.bybit.dto.BybitResponse;
+import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderbook;
+import info.bitrich.xchangestream.bybit.dto.trade.*;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
-import java.math.BigDecimal;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.util.List;
-import java.util.Locale;
 import org.junit.Test;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.derivative.FuturesContract;
@@ -38,6 +18,19 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.MarketOrder;
+
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.List;
+import java.util.Locale;
+
+import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.knowm.xchange.bybit.dto.BybitCategory.OPTION;
+import static org.knowm.xchange.bybit.dto.trade.BybitOrderType.MARKET;
+import static org.knowm.xchange.bybit.dto.trade.details.BybitTimeInForce.IOC;
+import static org.knowm.xchange.dto.Order.OrderStatus.FILLED;
 
 public class BybitStreamAdaptersTest {
 
