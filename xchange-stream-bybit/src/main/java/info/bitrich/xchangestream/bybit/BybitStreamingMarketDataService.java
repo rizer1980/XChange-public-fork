@@ -14,13 +14,6 @@ import io.reactivex.rxjava3.subjects.PublishSubject;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.*;
-import org.knowm.xchange.instrument.Instrument;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
-import org.knowm.xchange.dto.Order;
-import org.knowm.xchange.dto.marketdata.*;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
@@ -335,7 +328,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
         .subscribeChannel(channelUniqueId)
         .map(
             jsonNode -> {
-              dto.BybitResponse<BybitLinearInverseTicker> bybitTicker =
+              BybitResponse<BybitLinearInverseTicker> bybitTicker =
                   mapper.treeToValue(jsonNode, new TypeReference<>() {
                   });
               String type = bybitTicker.getType();
@@ -405,7 +398,7 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
         .subscribeChannel(channelUniqueId)
         .map(
             jsonNode -> {
-              dto.BybitResponse<BybitLinearInverseTicker> bybitTicker =
+              BybitResponse<BybitLinearInverseTicker> bybitTicker =
                   mapper.treeToValue(jsonNode, new TypeReference<>() {
                   });
               String type = bybitTicker.getType();
