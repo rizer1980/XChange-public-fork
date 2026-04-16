@@ -1,7 +1,8 @@
 package info.bitrich.xchangestream.bybit.dto.marketdata;
 
-import java.beans.ConstructorProperties;
 import lombok.Getter;
+
+import java.beans.ConstructorProperties;
 
 @Getter
 public class BybitOrderbook {

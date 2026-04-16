@@ -1,26 +1,11 @@
 package info.bitrich.xchangestream.bybit;
 
-import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitOrderStatus;
-import static org.knowm.xchange.bybit.BybitAdapters.convertBybitSymbolToInstrument;
-import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
-import static org.knowm.xchange.bybit.BybitAdapters.getOrderType;
-
 import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderbook;
 import info.bitrich.xchangestream.bybit.dto.marketdata.BybitPublicOrder;
-import info.bitrich.xchangestream.bybit.dto.trade.BybitComplexOrderChanges;
-import info.bitrich.xchangestream.bybit.dto.trade.BybitComplexPositionChanges;
+import info.bitrich.xchangestream.bybit.dto.trade.*;
 import info.bitrich.xchangestream.bybit.dto.trade.BybitOrderChangesResponse.BybitOrderChanges;
-import info.bitrich.xchangestream.bybit.dto.trade.BybitOrderFlag;
 import info.bitrich.xchangestream.bybit.dto.trade.BybitPositionChangesResponse.BybitPositionChanges;
-import info.bitrich.xchangestream.bybit.dto.trade.BybitStreamBatchAmendOrdersPayload;
 import info.bitrich.xchangestream.bybit.dto.trade.BybitStreamBatchAmendOrdersPayload.BybitStreamBatchAmendOrderPayload;
-import info.bitrich.xchangestream.bybit.dto.trade.BybitTrade;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.bybit.dto.trade.details.BybitTimeInForce;
@@ -29,15 +14,20 @@ import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.OpenPosition;
 import org.knowm.xchange.dto.account.OpenPosition.Type;
 import org.knowm.xchange.dto.account.OpenPositions;
-import org.knowm.xchange.dto.marketdata.FundingRate;
-import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.dto.marketdata.*;
 import org.knowm.xchange.dto.marketdata.FundingRate.FundingRateInterval;
-import org.knowm.xchange.dto.marketdata.OrderBook;
-import org.knowm.xchange.dto.marketdata.Trade;
-import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static org.knowm.xchange.bybit.BybitAdapters.*;
 
 public class BybitStreamAdapters {
 
