@@ -621,7 +621,7 @@ public class OkexAdapters {
   }
 
   public static CandleStickData adaptCandleStickData(
-      List<OkexCandleStick> okexCandleStickList, CurrencyPair currencyPair) {
+      List<OkexCandleStick> okexCandleStickList, Instrument instrument) {
     CandleStickData candleStickData = null;
     if (!okexCandleStickList.isEmpty()) {
       List<CandleStick> candleStickList = new ArrayList<>();
@@ -637,7 +637,7 @@ public class OkexAdapters {
                 .quotaVolume(new BigDecimal(okexCandleStick.getVolumeCcy()))
                 .build());
       }
-      candleStickData = new CandleStickData(currencyPair, candleStickList);
+      candleStickData = new CandleStickData(instrument, candleStickList);
     }
     return candleStickData;
   }

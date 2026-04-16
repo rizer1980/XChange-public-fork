@@ -153,14 +153,18 @@ public class OkexMarketDataServiceRaw extends OkexBaseService {
   public OkexResponse<List<OkexCandleStick>> getHistoryCandle(
       String instrument, String after, String before, String bar, String limit)
       throws OkexException, IOException {
-    return okex.getHistoryCandles(
-        instrument,
-        after,
-        before,
-        bar,
-        limit,
-        (String)
-            exchange.getExchangeSpecification().getExchangeSpecificParametersItem(PARAM_SIMULATED));
+    return decorateApiCall(
+        () ->
+            okex.getHistoryCandles(
+                instrument,
+                after,
+                before,
+                bar,
+                limit,
+                (String)
+                    exchange.getExchangeSpecification().getExchangeSpecificParametersItem(PARAM_SIMULATED)))
+        .withRateLimiter(rateLimiter(Okex.candlesHistoryPath))
+        .call();
   }
 
   public OkexResponse<List<OkexCandleStick>> getCandle(
