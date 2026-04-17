@@ -8,7 +8,6 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.util.Date;
-import lombok.ToString;
 
 /**
  * Data object representing a CandleStick
@@ -16,7 +15,6 @@ import lombok.ToString;
 @ToString
 @Getter
 @JsonDeserialize(builder = CandleStick.Builder.class)
-@ToString
 @AllArgsConstructor
 public class CandleStick {
 
