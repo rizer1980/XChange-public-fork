@@ -2,16 +2,17 @@ package org.knowm.xchange.okex.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+
 import java.util.List;
 import lombok.Getter;
 
 @Getter
 public class OkexOrderbook {
 
-  private final List<OkexPublicOrder> asks;
-
-  private final List<OkexPublicOrder> bids;
-  private final String ts;
+  @Getter private final List<OkexPublicOrder> asks;
+  @Getter private final List<OkexPublicOrder> bids;
+  @Getter private final String ts;
 
   @JsonCreator
   public OkexOrderbook(
