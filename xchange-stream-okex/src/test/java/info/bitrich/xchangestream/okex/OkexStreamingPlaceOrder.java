@@ -2,7 +2,6 @@ package info.bitrich.xchangestream.okex;
 
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
-import io.reactivex.disposables.Disposable;
 import org.junit.Before;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeSpecification;
@@ -14,10 +13,8 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.OkexExchange;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 import static org.knowm.xchange.okex.OkexExchange.PARAM_USE_AWS;
 

@@ -1,11 +1,5 @@
 package org.knowm.xchange.okex.service;
 
-import static org.knowm.xchange.okex.OkexExchange.PARAM_PASSPHRASE;
-import static org.knowm.xchange.okex.OkexExchange.PARAM_SIMULATED;
-
-import java.io.IOException;
-import java.util.Date;
-import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.okex.OkexAuthenticated;
 import org.knowm.xchange.okex.OkexExchange;
@@ -14,6 +8,13 @@ import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.account.OkexPosition;
 import org.knowm.xchange.okex.dto.trade.*;
 import org.knowm.xchange.utils.DateUtils;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.List;
+
+import static org.knowm.xchange.okex.OkexExchange.PARAM_PASSPHRASE;
+import static org.knowm.xchange.okex.OkexExchange.PARAM_SIMULATED;
 
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkexTradeServiceRaw extends OkexBaseService {
@@ -108,7 +109,7 @@ public class OkexTradeServiceRaw extends OkexBaseService {
                       instrumentId,
                       orderId,
                       null))
-          .withRateLimiter((rateLimiter(OkexAuthenticated.orderDetailsPath)))
+          .withRateLimiter((rateLimiter(OkexAuthenticated.orderPath)))
           .call();
     } catch (OkexException e) {
       throw handleError(e);
@@ -145,7 +146,7 @@ public class OkexTradeServiceRaw extends OkexBaseService {
                           exchange
                               .getExchangeSpecification()
                               .getExchangeSpecificParametersItem(PARAM_SIMULATED)))
-          .withRateLimiter((rateLimiter(OkexAuthenticated.orderDetailsPath)))
+          .withRateLimiter((rateLimiter(OkexAuthenticated.orderPath)))
           .call();
     } catch (OkexException e) {
       throw handleError(e);
@@ -171,7 +172,7 @@ public class OkexTradeServiceRaw extends OkexBaseService {
                               .getExchangeSpecification()
                               .getExchangeSpecificParametersItem(PARAM_SIMULATED),
                       order))
-          .withRateLimiter(rateLimiter(OkexAuthenticated.placeOrderPath))
+          .withRateLimiter(rateLimiter(OkexAuthenticated.orderPath))
           .call();
     } catch (OkexException e) {
       throw handleError(e);

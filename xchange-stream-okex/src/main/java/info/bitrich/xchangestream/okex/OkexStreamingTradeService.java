@@ -1,11 +1,5 @@
 package info.bitrich.xchangestream.okex;
 
-import static info.bitrich.xchangestream.okex.OkexPrivateStreamingService.CANCEL_ORDER;
-import static info.bitrich.xchangestream.okex.OkexPrivateStreamingService.CHANGE_ORDER;
-import static info.bitrich.xchangestream.okex.OkexPrivateStreamingService.PLACE_ORDER;
-import static info.bitrich.xchangestream.okex.OkexPrivateStreamingService.USER_ORDER_CHANGES;
-import static info.bitrich.xchangestream.okex.OkexPrivateStreamingService.USER_POSITION_CHANGES;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.core.StreamingTradeService;
@@ -13,7 +7,6 @@ import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.github.resilience4j.rxjava3.ratelimiter.operator.RateLimiterOperator;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
-import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.OpenPosition;
@@ -29,6 +22,10 @@ import org.knowm.xchange.okex.dto.account.OkexPosition;
 import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
 import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
+
+import java.util.List;
+
+import static info.bitrich.xchangestream.okex.OkexPrivateStreamingService.*;
 
 public class OkexStreamingTradeService implements StreamingTradeService {
 
@@ -132,7 +129,7 @@ public class OkexStreamingTradeService implements StreamingTradeService {
               RateLimiterOperator.of(
                   resilienceRegistries
                       .rateLimiters()
-                      .rateLimiter(OkexAuthenticated.placeOrderPath)));
+                      .rateLimiter(OkexAuthenticated.orderPath)));
     } else {
       throw new UnsupportedOperationException("privateStreamingService not authorized");
     }
@@ -162,7 +159,7 @@ public class OkexStreamingTradeService implements StreamingTradeService {
               RateLimiterOperator.of(
                   resilienceRegistries
                       .rateLimiters()
-                      .rateLimiter(OkexAuthenticated.placeOrderPath)));
+                      .rateLimiter(OkexAuthenticated.orderPath)));
     } else {
       throw new UnsupportedOperationException("privateStreamingService not authorized");
     }
