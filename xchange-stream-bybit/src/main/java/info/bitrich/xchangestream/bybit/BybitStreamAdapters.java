@@ -23,6 +23,7 @@ import org.knowm.xchange.instrument.Instrument;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -321,7 +322,7 @@ public class BybitStreamAdapters {
     List<CandleStick> candleSticks = new ArrayList<>();
     candleSticks.add(
         new CandleStick.Builder()
-            .timestamp(new Date(bybitCandle.getTimestamp()))
+            .timestamp(Instant.ofEpochMilli(bybitCandle.getTimestamp()))
             .open(new BigDecimal(bybitCandle.getOpen()))
             .high(new BigDecimal(bybitCandle.getHigh()))
             .low(new BigDecimal(bybitCandle.getLow()))

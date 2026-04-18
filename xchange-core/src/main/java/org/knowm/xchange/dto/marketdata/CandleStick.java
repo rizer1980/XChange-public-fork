@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.Instant;
 
 /**
  * Data object representing a CandleStick
@@ -30,11 +30,11 @@ public class CandleStick {
   private final BigDecimal bidSize;
   private final BigDecimal ask;
   private final BigDecimal askSize;
-  private final Date timestamp;
+  private final Instant timestamp;
   private final boolean completed;
 
   public CandleStick(
-          Date timestamp,
+      Instant timestamp,
           BigDecimal open,
           BigDecimal last,
           BigDecimal high,
@@ -66,7 +66,7 @@ public class CandleStick {
 
   @JsonPOJOBuilder(withPrefix = "")
   public static class Builder {
-    private Date timestamp;
+    private Instant timestamp;
     private BigDecimal open;
     private BigDecimal last;
     private BigDecimal high;
@@ -99,7 +99,7 @@ public class CandleStick {
               .completed(candleStick.isCompleted());
     }
 
-    public Builder timestamp(Date timestamp) {
+    public Builder timestamp(Instant timestamp) {
       this.timestamp = timestamp;
       return this;
     }
