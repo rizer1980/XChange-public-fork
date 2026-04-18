@@ -1,11 +1,5 @@
 package org.knowm.xchange.gateio.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.Validate;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -15,12 +9,10 @@ import org.knowm.xchange.gateio.GateioExchange;
 import org.knowm.xchange.gateio.dto.account.GateioOrder;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
 import org.knowm.xchange.instrument.Instrument;
-import org.knowm.xchange.service.trade.params.CurrencyPairParam;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamCurrencyPair;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamPaging;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamTransactionId;
-import org.knowm.xchange.service.trade.params.TradeHistoryParams;
-import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
+import org.knowm.xchange.service.trade.params.*;
+
+import java.io.IOException;
+import java.util.*;
 
 public class GateioTradeServiceRaw extends GateioBaseService {
 
@@ -43,8 +35,8 @@ public class GateioTradeServiceRaw extends GateioBaseService {
         apiKey,
         exchange.getNonceFactory(),
         gateioV4ParamsDigest,
-        GateioAdapters.toString(instrument),
-        GateioAdapters.toString(orderStatus));
+        GateioAdapters.toGateioInstrument(instrument),
+        GateioAdapters.toGateioInstrument(orderStatus));
   }
 
   public List<GateioUserTradeRaw> getGateioUserTrades(TradeHistoryParams params)
@@ -90,7 +82,7 @@ public class GateioTradeServiceRaw extends GateioBaseService {
                 apiKey,
                 exchange.getNonceFactory(),
                 gateioV4ParamsDigest,
-                GateioAdapters.toString(currencyPair),
+                GateioAdapters.toGateioInstrument(currencyPair),
                 1000,
                 currentPageNumber,
                 orderId,
@@ -108,7 +100,7 @@ public class GateioTradeServiceRaw extends GateioBaseService {
         apiKey,
         exchange.getNonceFactory(),
         gateioV4ParamsDigest,
-        GateioAdapters.toString(currencyPair),
+        GateioAdapters.toGateioInstrument(currencyPair),
         pageLength,
         pageNumber,
         orderId,
@@ -128,7 +120,7 @@ public class GateioTradeServiceRaw extends GateioBaseService {
         exchange.getNonceFactory(),
         gateioV4ParamsDigest,
         orderId,
-        GateioAdapters.toString(instrument));
+        GateioAdapters.toGateioInstrument(instrument));
   }
 
   public GateioOrder cancelOrderRaw(String orderId, Instrument instrument) throws IOException {
@@ -137,6 +129,6 @@ public class GateioTradeServiceRaw extends GateioBaseService {
         exchange.getNonceFactory(),
         gateioV4ParamsDigest,
         orderId,
-        GateioAdapters.toString(instrument));
+        GateioAdapters.toGateioInstrument(instrument));
   }
 }

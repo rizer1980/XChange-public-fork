@@ -1,17 +1,13 @@
 package org.knowm.xchange.gateio.service;
 
-import java.io.IOException;
-import java.util.List;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.gateio.GateioAdapters;
 import org.knowm.xchange.gateio.GateioExchange;
-import org.knowm.xchange.gateio.dto.marketdata.GateioCurrencyChain;
-import org.knowm.xchange.gateio.dto.marketdata.GateioCurrencyInfo;
-import org.knowm.xchange.gateio.dto.marketdata.GateioCurrencyPairDetails;
-import org.knowm.xchange.gateio.dto.marketdata.GateioOrderBook;
-import org.knowm.xchange.gateio.dto.marketdata.GateioServerTime;
-import org.knowm.xchange.gateio.dto.marketdata.GateioTicker;
+import org.knowm.xchange.gateio.dto.marketdata.*;
 import org.knowm.xchange.instrument.Instrument;
+
+import java.io.IOException;
+import java.util.List;
 
 public class GateioMarketDataServiceRaw extends GateioBaseService {
 
@@ -24,7 +20,7 @@ public class GateioMarketDataServiceRaw extends GateioBaseService {
   }
 
   public List<GateioTicker> getGateioTickers(Instrument instrument) throws IOException {
-    return gateio.getTickers(GateioAdapters.toString(instrument));
+    return gateio.getTickers(GateioAdapters.toGateioInstrument(instrument));
   }
 
   public List<GateioCurrencyInfo> getGateioCurrencyInfos() throws IOException {
@@ -32,7 +28,7 @@ public class GateioMarketDataServiceRaw extends GateioBaseService {
   }
 
   public GateioOrderBook getGateioOrderBook(Instrument instrument) throws IOException {
-    return gateio.getOrderBook(GateioAdapters.toString(instrument), false);
+    return gateio.getOrderBook(GateioAdapters.toGateioInstrument(instrument), false);
   }
 
   public List<GateioCurrencyChain> getCurrencyChains(Currency currency) throws IOException {
@@ -43,8 +39,26 @@ public class GateioMarketDataServiceRaw extends GateioBaseService {
     return gateio.getCurrencyPairDetails();
   }
 
+  public List<GateioInstrumentDetails> getInstrumentDetails() throws IOException {
+    return gateio.getInstrumentDetails();
+  }
+
   public GateioCurrencyPairDetails getCurrencyPairDetails(Instrument instrument)
       throws IOException {
-    return gateio.getCurrencyPairDetails(GateioAdapters.toString(instrument));
+    return gateio.getCurrencyPairDetails(GateioAdapters.toGateioInstrument(instrument));
+  }
+
+  public List<GateioSpotCandlestick> getGateioSpotCandlesticks(
+      Instrument instrument, Integer limit, Long from, Long to, String interval)
+      throws IOException {
+    return gateio.getSpotCandlesticks(
+        GateioAdapters.toGateioInstrument(instrument), limit, from, to, interval);
+  }
+
+  public List<GateioFuturesCandlestick> getGateioFuturesCandlesticks(
+      Instrument instrument, Integer limit, Long from, Long to, String interval)
+      throws IOException {
+    return gateio.getFuturesCandlesticks(instrument.getCounter().toString().toLowerCase(),
+        GateioAdapters.toGateioInstrument(instrument), limit, from, to, interval);
   }
 }

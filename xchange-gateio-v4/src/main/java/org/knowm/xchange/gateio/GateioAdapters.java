@@ -1,17 +1,13 @@
 package org.knowm.xchange.gateio;
 
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.stream.Collectors;
 import lombok.experimental.UtilityClass;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.account.FundingRecord;
+import org.knowm.xchange.dto.marketdata.CandleStick;
+import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
@@ -21,20 +17,25 @@ import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.gateio.dto.account.GateioAccountBookRecord;
 import org.knowm.xchange.gateio.dto.account.GateioOrder;
 import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRequest;
-import org.knowm.xchange.gateio.dto.marketdata.GateioCurrencyPairDetails;
-import org.knowm.xchange.gateio.dto.marketdata.GateioOrderBook;
-import org.knowm.xchange.gateio.dto.marketdata.GateioTicker;
+import org.knowm.xchange.gateio.dto.marketdata.*;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTrade;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
 import org.knowm.xchange.gateio.service.params.GateioWithdrawFundsParams;
 import org.knowm.xchange.instrument.Instrument;
+
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 @UtilityClass
 public class GateioAdapters {
 
   public final BigDecimal PARTIALLY_FILLED_SCALE = new BigDecimal("0.1");
 
-  public String toString(Instrument instrument) {
+  public String toGateioInstrument(Instrument instrument) {
     if (instrument == null) {
       return null;
     } else {
@@ -75,7 +76,7 @@ public class GateioAdapters {
     return new OrderBook(Date.from(gateioOrderBook.getGeneratedAt()), asks, bids);
   }
 
-  public InstrumentMetaData toInstrumentMetaData(
+  public InstrumentMetaData currencyPairToInstrumentMetaData(
       GateioCurrencyPairDetails gateioCurrencyPairDetails) {
     return InstrumentMetaData.builder()
         .tradingFee(gateioCurrencyPairDetails.getFee())
@@ -86,7 +87,23 @@ public class GateioAdapters {
         .build();
   }
 
-  public String toString(OrderStatus orderStatus) {
+  public InstrumentMetaData instrumentToInstrumentMetaData(
+      GateioInstrumentDetails gateioInstrumentDetails) {
+    return InstrumentMetaData.builder()
+        .contractValue(gateioInstrumentDetails.getQuantoMultiplier())
+        .tradingFee(gateioInstrumentDetails.getTakerFeeRate())
+        .minimumAmount(gateioInstrumentDetails.getOrderSizeMin().multiply(gateioInstrumentDetails.getQuantoMultiplier()).stripTrailingZeros())
+        .maximumAmount(gateioInstrumentDetails.getOrderSizeMax().multiply(gateioInstrumentDetails.getQuantoMultiplier()).stripTrailingZeros())
+        .priceStepSize(gateioInstrumentDetails.getOrderPriceRound())
+        // no data, so suggest that equals to order min size
+        .amountStepSize(gateioInstrumentDetails.getOrderSizeMin().multiply(gateioInstrumentDetails.getQuantoMultiplier()).stripTrailingZeros())
+        .volumeScale(numberOfDecimals(gateioInstrumentDetails.getOrderSizeMin().multiply(gateioInstrumentDetails.getQuantoMultiplier()).stripTrailingZeros()))
+        .priceScale(numberOfDecimals(gateioInstrumentDetails.getOrderPriceRound()))
+        .contractValue(gateioInstrumentDetails.getQuantoMultiplier())
+        .build();
+  }
+
+  public String toGateioInstrument(OrderStatus orderStatus) {
     switch (orderStatus) {
       case OPEN:
         return "open";
@@ -237,6 +254,47 @@ public class GateioAdapters {
         .build();
   }
 
+  public CandleStickData toCandleStickDataSpot(
+      List<GateioSpotCandlestick> gateioSpotCandlesticks, Instrument instrument) {
+    List<CandleStick> candleSticks =
+        gateioSpotCandlesticks.stream()
+            .map(
+                gateioSpotCandlestick ->
+                    new CandleStick.Builder()
+                        .timestamp(new Date(gateioSpotCandlestick.getTimestamp() * 1000))
+                        .open(gateioSpotCandlestick.getOpen())
+                        .high(gateioSpotCandlestick.getHigh())
+                        .low(gateioSpotCandlestick.getLow())
+                        .close(gateioSpotCandlestick.getClose())
+                        .volume(gateioSpotCandlestick.getVolume())
+                        .quotaVolume(gateioSpotCandlestick.getQuoteVolume())
+                        .completed(gateioSpotCandlestick.isCompleted())
+                        .build())
+            .collect(Collectors.toList());
+
+    return new CandleStickData(instrument, candleSticks);
+  }
+
+  public CandleStickData toCandleStickDataFutures(
+      List<GateioFuturesCandlestick> gateioFuturesCandlesticks, Instrument instrument) {
+    List<CandleStick> candleSticks =
+        gateioFuturesCandlesticks.stream()
+            .map(
+                gateioFuturesCandlestick ->
+                    new CandleStick.Builder()
+                        .timestamp(new Date(gateioFuturesCandlestick.getTimestamp() * 1000))
+                        .open(gateioFuturesCandlestick.getOpen())
+                        .high(gateioFuturesCandlestick.getHigh())
+                        .low(gateioFuturesCandlestick.getLow())
+                        .close(gateioFuturesCandlestick.getClose())
+                        .volume(gateioFuturesCandlestick.getVolume())
+                        .quotaVolume(gateioFuturesCandlestick.getQuoteVolume())
+                        .build())
+            .collect(Collectors.toList());
+
+    return new CandleStickData(instrument, candleSticks);
+  }
+
   public FundingRecord toFundingRecords(GateioAccountBookRecord gateioAccountBookRecord) {
     return FundingRecord.builder()
         .internalId(gateioAccountBookRecord.getId())
@@ -247,5 +305,10 @@ public class GateioAdapters {
         .amount(gateioAccountBookRecord.getChange().abs())
         .description(gateioAccountBookRecord.getTypeDescription())
         .build();
+  }
+
+  private static int numberOfDecimals(BigDecimal value) {
+    double d = value.doubleValue();
+    return -(int) Math.round(Math.log10(d));
   }
 }

@@ -1,15 +1,10 @@
 package org.knowm.xchange.gateio.service;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.Validate;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.derivative.FuturesContract;
+import org.knowm.xchange.dto.marketdata.CandleStickData;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.meta.ExchangeHealth;
@@ -19,13 +14,21 @@ import org.knowm.xchange.gateio.GateioErrorAdapter;
 import org.knowm.xchange.gateio.GateioExchange;
 import org.knowm.xchange.gateio.config.Config;
 import org.knowm.xchange.gateio.dto.GateioException;
-import org.knowm.xchange.gateio.dto.marketdata.GateioCurrencyInfo;
-import org.knowm.xchange.gateio.dto.marketdata.GateioCurrencyPairDetails;
-import org.knowm.xchange.gateio.dto.marketdata.GateioOrderBook;
-import org.knowm.xchange.gateio.dto.marketdata.GateioTicker;
+import org.knowm.xchange.gateio.dto.marketdata.*;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.knowm.xchange.service.marketdata.params.Params;
+import org.knowm.xchange.service.trade.params.CandleStickDataParams;
+import org.knowm.xchange.service.trade.params.DefaultCandleStickParam;
+import org.knowm.xchange.service.trade.params.DefaultCandleStickParamWithLimit;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class GateioMarketDataService extends GateioMarketDataServiceRaw
     implements MarketDataService {
@@ -122,18 +125,103 @@ public class GateioMarketDataService extends GateioMarketDataServiceRaw
 
   public Map<Instrument, InstrumentMetaData> getMetaDataByInstrument() throws IOException {
     try {
-      List<GateioCurrencyPairDetails> metadata = getCurrencyPairDetails();
 
-      return metadata.stream()
-          .collect(
-              Collectors.toMap(
-                  gateioCurrencyPairDetails ->
-                      new CurrencyPair(
-                          gateioCurrencyPairDetails.getAsset(),
-                          gateioCurrencyPairDetails.getQuote()),
-                  GateioAdapters::toInstrumentMetaData));
+      if (exchange.isFuturesEnabled()) {
+        List<GateioInstrumentDetails> metadata = getInstrumentDetails();
+        return metadata.stream().filter(f -> f.getType().equals("direct") &&
+                f.getStatus().equals("active"))
+            .collect(
+                Collectors.toMap(
+                    gateioInstrumentDetails ->
+                        new FuturesContract(
+                            new CurrencyPair(gateioInstrumentDetails.getName()),
+                            "PERP"),
+                    GateioAdapters::instrumentToInstrumentMetaData));
+      } else {
+        List<GateioCurrencyPairDetails> metadata = getCurrencyPairDetails();
+
+        return metadata.stream()
+            .collect(
+                Collectors.toMap(
+                    gateioCurrencyPairDetails ->
+                        new CurrencyPair(
+                            gateioCurrencyPairDetails.getAsset(),
+                            gateioCurrencyPairDetails.getQuote()),
+                    GateioAdapters::currencyPairToInstrumentMetaData));
+      }
     } catch (GateioException e) {
       throw GateioErrorAdapter.adapt(e);
     }
+  }
+
+  @Override
+  public CandleStickData getCandleStickData(CurrencyPair currencyPair, CandleStickDataParams params)
+      throws IOException {
+    return getCandleStickData((Instrument) currencyPair, params);
+  }
+
+  /**
+   * K-line chart data returns a maximum of 1000 points per request. When specifying from, to, and interval, ensure the number of points is not excessive
+   *
+   * @param instrument instrument.
+   * @param params     Params for query, including start(e.g. march 2022.) and end date, period etc.,
+   * @return
+   * @throws IOException
+   */
+  @Override
+  public CandleStickData getCandleStickData(Instrument instrument, CandleStickDataParams params)
+      throws IOException {
+    Long from = null;
+    Long to = null;
+    Integer limit = null;
+    String interval = "1h"; // default
+    if (params instanceof DefaultCandleStickParamWithLimit) {
+      DefaultCandleStickParamWithLimit p =
+          (DefaultCandleStickParamWithLimit) params;
+      limit = p.getLimit();
+      if (p.getPeriodInSecs() > 0) {
+        interval = adaptInterval(p.getPeriodInSecs());
+      }
+    }
+    // limit OR (from, to)
+    else if (params instanceof DefaultCandleStickParam) {
+      DefaultCandleStickParam p =
+          (DefaultCandleStickParam) params;
+      if (p.getStartDate() != null) {
+        from = p.getStartDate().getTime() / 1000;
+      }
+      if (p.getEndDate() != null) {
+        to = p.getEndDate().getTime() / 1000;
+      }
+      if (p.getPeriodInSecs() > 0) {
+        interval = adaptInterval(p.getPeriodInSecs());
+      }
+    }
+    try {
+      if (instrument instanceof FuturesContract) {
+        List<GateioFuturesCandlestick> gateiFuturesCandlesticks = getGateioFuturesCandlesticks(instrument, limit, from, to, interval);
+        return GateioAdapters.toCandleStickDataFutures(gateiFuturesCandlesticks, instrument);
+      } else {
+        List<GateioSpotCandlestick> gateioSpotCandlesticks = getGateioSpotCandlesticks(instrument, limit, from, to, interval);
+        return GateioAdapters.toCandleStickDataSpot(gateioSpotCandlesticks, instrument);
+      }
+    } catch (GateioException e) {
+      throw GateioErrorAdapter.adapt(e);
+    }
+  }
+
+  private String adaptInterval(long periodInSecs) {
+    if (periodInSecs == 10) return "10s";
+    if (periodInSecs == 60) return "1m";
+    if (periodInSecs == 300) return "5m";
+    if (periodInSecs == 900) return "15m";
+    if (periodInSecs == 1800) return "30m";
+    if (periodInSecs == 3600) return "1h";
+    if (periodInSecs == 14400) return "4h";
+    if (periodInSecs == 28800) return "8h";
+    if (periodInSecs == 86400) return "1d";
+    if (periodInSecs == 604800) return "7d";
+    if (periodInSecs == 2592000) return "30d";
+    return "1h";
   }
 }

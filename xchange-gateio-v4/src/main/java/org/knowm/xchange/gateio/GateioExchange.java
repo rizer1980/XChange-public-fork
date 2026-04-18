@@ -1,12 +1,10 @@
 package org.knowm.xchange.gateio;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import org.knowm.xchange.BaseExchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.dto.meta.ExchangeMetaData;
 import org.knowm.xchange.dto.meta.InstrumentMetaData;
+import org.knowm.xchange.gateio.dto.GateioExchangeType;
 import org.knowm.xchange.gateio.service.GateioAccountService;
 import org.knowm.xchange.gateio.service.GateioMarketDataService;
 import org.knowm.xchange.gateio.service.GateioTradeService;
@@ -14,8 +12,14 @@ import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.utils.nonce.CurrentTimeIncrementalNonceFactory;
 import si.mazi.rescu.SynchronizedValueFactory;
 
-public class GateioExchange extends BaseExchange {
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import static org.knowm.xchange.gateio.dto.GateioExchangeType.SPOT;
+
+public class GateioExchange extends BaseExchange {
+  public static String EXCHANGE_TYPE = "Exchange_Type";
   private final SynchronizedValueFactory<Long> nonceFactory =
       new CurrentTimeIncrementalNonceFactory(TimeUnit.SECONDS);
 
@@ -30,6 +34,7 @@ public class GateioExchange extends BaseExchange {
   public ExchangeSpecification getDefaultExchangeSpecification() {
 
     ExchangeSpecification specification = new ExchangeSpecification(this.getClass());
+    specification.setExchangeSpecificParametersItem(EXCHANGE_TYPE, SPOT);
     specification.setSslUri("https://api.gateio.ws");
     specification.setHost("gate.io");
     specification.setExchangeName("Gateio");
@@ -48,5 +53,10 @@ public class GateioExchange extends BaseExchange {
         ((GateioMarketDataService) marketDataService).getMetaDataByInstrument();
 
     exchangeMetaData = new ExchangeMetaData(instruments, null, null, null, null);
+  }
+
+  public boolean isFuturesEnabled() {
+    return GateioExchangeType.FUTURES.equals(
+        exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE));
   }
 }
