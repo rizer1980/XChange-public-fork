@@ -52,6 +52,6 @@ public class BybitStreamingMarketDataServiceTest {
     assertThat(candleStickData.getCandleSticks().get(0).getLow()).isEqualByComparingTo(new BigDecimal("16608"));
     assertThat(candleStickData.getCandleSticks().get(0).getVolume()).isEqualByComparingTo(new BigDecimal("2.081"));
     assertThat(candleStickData.getCandleSticks().get(0).getQuotaVolume()).isEqualByComparingTo(new BigDecimal("34666.4005"));
-    assertThat(candleStickData.getCandleSticks().get(0).getTimestamp().getTime()).isEqualTo(1672324988882L);
+    assertThat(candleStickData.getCandleSticks().get(0).getTimestamp().toEpochMilli()).isEqualTo(1672324988882L);
   }
 }
