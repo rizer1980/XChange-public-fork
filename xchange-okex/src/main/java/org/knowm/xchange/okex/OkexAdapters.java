@@ -595,7 +595,7 @@ public class OkexAdapters {
         BigDecimal quotaVolume = new BigDecimal(okexCandleStick.getVolCcyQuote());
         candleStickList.add(
             new CandleStick.Builder()
-                .timestamp(new Date(okexCandleStick.getTimestamp()))
+                .timestamp(Instant.ofEpochMilli(okexCandleStick.getTimestamp()))
                 .open(new BigDecimal(okexCandleStick.getOpenPrice()))
                 .high(new BigDecimal(okexCandleStick.getHighPrice()))
                 .low(new BigDecimal(okexCandleStick.getLowPrice()))
