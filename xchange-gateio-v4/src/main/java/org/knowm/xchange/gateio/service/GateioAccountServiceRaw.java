@@ -1,21 +1,10 @@
 package org.knowm.xchange.gateio.service;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.gateio.GateioErrorAdapter;
 import org.knowm.xchange.gateio.GateioExchange;
 import org.knowm.xchange.gateio.dto.GateioException;
-import org.knowm.xchange.gateio.dto.account.GateioAccountBookRecord;
-import org.knowm.xchange.gateio.dto.account.GateioAddressRecord;
-import org.knowm.xchange.gateio.dto.account.GateioCurrencyBalance;
-import org.knowm.xchange.gateio.dto.account.GateioDepositAddress;
-import org.knowm.xchange.gateio.dto.account.GateioDepositRecord;
-import org.knowm.xchange.gateio.dto.account.GateioSubAccountTransfer;
-import org.knowm.xchange.gateio.dto.account.GateioWithdrawStatus;
-import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRecord;
-import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRequest;
+import org.knowm.xchange.gateio.dto.account.*;
 import org.knowm.xchange.gateio.dto.account.params.GateioSubAccountTransfersParams;
 import org.knowm.xchange.gateio.service.params.GateioDepositsParams;
 import org.knowm.xchange.gateio.service.params.GateioFundingHistoryParams;
@@ -23,6 +12,10 @@ import org.knowm.xchange.gateio.service.params.GateioWithdrawalsParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamPaging;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsTimeSpan;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
 
 public class GateioAccountServiceRaw extends GateioBaseService {
 
@@ -159,5 +152,21 @@ public class GateioAccountServiceRaw extends GateioBaseService {
         to,
         params.getPageLength(),
         params.getZeroBasedPageNumber());
+  }
+
+  public void setLeverage(String settle, String contract, String leverage) throws IOException {
+    try {
+      GateioPositionLeverageUpdate positionLeverageUpdate =
+          gateioV4Authenticated.updatePositionLeverage(
+              apiKey,
+              exchange.getNonceFactory(),
+              gateioV4ParamsDigest,
+              settle,
+              contract,
+              leverage);
+      Objects.requireNonNull(positionLeverageUpdate);
+    } catch (GateioException e) {
+      throw GateioErrorAdapter.adapt(e);
+    }
   }
 }

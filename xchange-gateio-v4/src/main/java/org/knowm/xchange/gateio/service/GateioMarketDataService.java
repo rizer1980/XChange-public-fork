@@ -1,5 +1,6 @@
 package org.knowm.xchange.gateio.service;
 
+import lombok.Setter;
 import org.apache.commons.lang3.Validate;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -32,7 +33,8 @@ import java.util.stream.Collectors;
 
 public class GateioMarketDataService extends GateioMarketDataServiceRaw
     implements MarketDataService {
-
+  @Setter
+  private Map<Instrument, InstrumentMetaData> instrumentMetaDataMap;
   public GateioMarketDataService(GateioExchange exchange) {
     super(exchange);
   }
@@ -125,16 +127,15 @@ public class GateioMarketDataService extends GateioMarketDataServiceRaw
 
   public Map<Instrument, InstrumentMetaData> getMetaDataByInstrument() throws IOException {
     try {
-
       if (exchange.isFuturesEnabled()) {
         List<GateioInstrumentDetails> metadata = getInstrumentDetails();
         return metadata.stream().filter(f -> f.getType().equals("direct") &&
-                f.getStatus().equals("active"))
+                f.getStatus().equals("trading"))
             .collect(
                 Collectors.toMap(
                     gateioInstrumentDetails ->
                         new FuturesContract(
-                            new CurrencyPair(gateioInstrumentDetails.getName()),
+                            new CurrencyPair(gateioInstrumentDetails.getName().replace("_", "/")),
                             "PERP"),
                     GateioAdapters::instrumentToInstrumentMetaData));
       } else {
@@ -200,7 +201,7 @@ public class GateioMarketDataService extends GateioMarketDataServiceRaw
     try {
       if (instrument instanceof FuturesContract) {
         List<GateioFuturesCandlestick> gateiFuturesCandlesticks = getGateioFuturesCandlesticks(instrument, limit, from, to, interval);
-        return GateioAdapters.toCandleStickDataFutures(gateiFuturesCandlesticks, instrument);
+        return GateioAdapters.toCandleStickDataFutures(gateiFuturesCandlesticks, instrument, instrumentMetaDataMap.get(instrument).getContractValue());
       } else {
         List<GateioSpotCandlestick> gateioSpotCandlesticks = getGateioSpotCandlesticks(instrument, limit, from, to, interval);
         return GateioAdapters.toCandleStickDataSpot(gateioSpotCandlesticks, instrument);

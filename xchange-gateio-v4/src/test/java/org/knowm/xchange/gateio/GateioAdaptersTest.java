@@ -28,7 +28,7 @@ class GateioAdaptersTest {
 
       FuturesContract instrument = new FuturesContract("BTC/USDT/PERP");
       CandleStickData candleStickData = GateioAdapters.toCandleStickDataFutures(
-          Arrays.asList(candlesticks), instrument);
+          Arrays.asList(candlesticks), instrument, new BigDecimal("0.0001"));
 
       assertThat(candleStickData.getInstrument()).isEqualTo(instrument);
       assertThat(candleStickData.getCandleSticks()).hasSize(1);

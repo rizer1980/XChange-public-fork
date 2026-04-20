@@ -1,10 +1,7 @@
 package org.knowm.xchange.gateio.service;
 
-import java.io.IOException;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.Validate;
+import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.FundingRecord;
@@ -17,9 +14,15 @@ import org.knowm.xchange.gateio.dto.account.GateioCurrencyBalance;
 import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRecord;
 import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRequest;
 import org.knowm.xchange.gateio.service.params.GateioWithdrawFundsParams;
+import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.service.account.AccountService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.WithdrawFundsParams;
+
+import java.io.IOException;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class GateioAccountService extends GateioAccountServiceRaw implements AccountService {
 
@@ -81,5 +84,24 @@ public class GateioAccountService extends GateioAccountServiceRaw implements Acc
     } catch (GateioException e) {
       throw GateioErrorAdapter.adapt(e);
     }
+  }
+
+  /**
+   * set leverage for futures contract
+   * Isolated margin only
+   *
+   * @param instrument symbol to change leverage
+   * @param leverage   leverage
+   * @return is successful
+   * @throws IOException
+   */
+  @Override
+  public boolean setLeverage(Instrument instrument, int leverage) throws IOException {
+    if (instrument instanceof FuturesContract) {
+      String settle = instrument.getCounter().getCurrencyCode().toLowerCase();
+      String contract = GateioAdapters.toGateioInstrument(instrument);
+      setLeverage(settle, contract, String.valueOf(leverage));
+      return true;
+    } else throw new UnsupportedOperationException("Leverage is not supported for spot instruments");
   }
 }

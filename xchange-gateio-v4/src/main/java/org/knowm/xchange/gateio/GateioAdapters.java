@@ -25,6 +25,7 @@ import org.knowm.xchange.instrument.Instrument;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -261,7 +262,7 @@ public class GateioAdapters {
             .map(
                 gateioSpotCandlestick ->
                     new CandleStick.Builder()
-                        .timestamp(new Date(gateioSpotCandlestick.getTimestamp() * 1000))
+                        .timestamp(Instant.ofEpochSecond(gateioSpotCandlestick.getTimestamp()))
                         .open(gateioSpotCandlestick.getOpen())
                         .high(gateioSpotCandlestick.getHigh())
                         .low(gateioSpotCandlestick.getLow())
@@ -276,18 +277,18 @@ public class GateioAdapters {
   }
 
   public CandleStickData toCandleStickDataFutures(
-      List<GateioFuturesCandlestick> gateioFuturesCandlesticks, Instrument instrument) {
+      List<GateioFuturesCandlestick> gateioFuturesCandlesticks, Instrument instrument, BigDecimal contractValue) {
     List<CandleStick> candleSticks =
         gateioFuturesCandlesticks.stream()
             .map(
                 gateioFuturesCandlestick ->
                     new CandleStick.Builder()
-                        .timestamp(new Date(gateioFuturesCandlestick.getTimestamp() * 1000))
+                        .timestamp(Instant.ofEpochSecond(gateioFuturesCandlestick.getTimestamp()))
                         .open(gateioFuturesCandlestick.getOpen())
                         .high(gateioFuturesCandlestick.getHigh())
                         .low(gateioFuturesCandlestick.getLow())
                         .close(gateioFuturesCandlestick.getClose())
-                        .volume(gateioFuturesCandlestick.getVolume())
+                        .volume(convertContractSizeToVolume(gateioFuturesCandlestick.getVolume(), contractValue))
                         .quotaVolume(gateioFuturesCandlestick.getQuoteVolume())
                         .build())
             .collect(Collectors.toList());
@@ -311,4 +312,10 @@ public class GateioAdapters {
     double d = value.doubleValue();
     return -(int) Math.round(Math.log10(d));
   }
+
+  private static BigDecimal convertContractSizeToVolume(
+      BigDecimal size, BigDecimal contractValue) {
+    return size.multiply(contractValue).stripTrailingZeros();
+  }
+
 }

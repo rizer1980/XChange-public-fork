@@ -53,6 +53,7 @@ public class GateioExchange extends BaseExchange {
         ((GateioMarketDataService) marketDataService).getMetaDataByInstrument();
 
     exchangeMetaData = new ExchangeMetaData(instruments, null, null, null, null);
+    ((GateioMarketDataService) marketDataService).setInstrumentMetaDataMap(exchangeMetaData.getInstruments());
   }
 
   public boolean isFuturesEnabled() {

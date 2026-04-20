@@ -1,31 +1,15 @@
 package org.knowm.xchange.gateio;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-import java.io.IOException;
-import java.util.List;
 import org.knowm.xchange.gateio.dto.GateioException;
-import org.knowm.xchange.gateio.dto.account.GateioAccountBookRecord;
-import org.knowm.xchange.gateio.dto.account.GateioAddressRecord;
-import org.knowm.xchange.gateio.dto.account.GateioCurrencyBalance;
-import org.knowm.xchange.gateio.dto.account.GateioDepositAddress;
-import org.knowm.xchange.gateio.dto.account.GateioDepositRecord;
-import org.knowm.xchange.gateio.dto.account.GateioOrder;
-import org.knowm.xchange.gateio.dto.account.GateioSubAccountTransfer;
-import org.knowm.xchange.gateio.dto.account.GateioWithdrawStatus;
-import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRecord;
-import org.knowm.xchange.gateio.dto.account.GateioWithdrawalRequest;
+import org.knowm.xchange.gateio.dto.account.*;
 import org.knowm.xchange.gateio.dto.trade.GateioUserTradeRaw;
 import si.mazi.rescu.ParamsDigest;
 import si.mazi.rescu.SynchronizedValueFactory;
+
+import java.io.IOException;
+import java.util.List;
 
 @Path("api/v4")
 @Produces(MediaType.APPLICATION_JSON)
@@ -183,5 +167,17 @@ public interface GateioV4Authenticated {
       @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
       @HeaderParam("SIGN") ParamsDigest signer,
       GateioWithdrawalRequest gateioWithdrawalRequest)
+      throws IOException, GateioException;
+
+  @POST
+  @Path("futures/{settle}/positions/{contract}/leverage")
+  @Consumes(MediaType.APPLICATION_JSON)
+  GateioPositionLeverageUpdate updatePositionLeverage(
+      @HeaderParam("KEY") String apiKey,
+      @HeaderParam("Timestamp") SynchronizedValueFactory<Long> timestamp,
+      @HeaderParam("SIGN") ParamsDigest signer,
+      @PathParam("settle") String settle,
+      @PathParam("contract") String contract,
+      @QueryParam("leverage") String leverage)
       throws IOException, GateioException;
 }
