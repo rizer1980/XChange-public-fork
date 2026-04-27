@@ -1,26 +1,11 @@
 package info.bitrich.xchangestream.binance.examples;
 
-import static info.bitrich.xchangestream.binance.BinanceStreamingExchange.USE_REALTIME_BOOK_TICKER;
-import static info.bitrich.xchangestream.binance.examples.Util.printOrderBookShortInfo;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.knowm.xchange.Exchange.USE_SANDBOX;
-import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
-import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
-import static org.knowm.xchange.binance.dto.marketdata.KlineInterval.d1;
-import static org.knowm.xchange.binance.dto.marketdata.KlineInterval.m1;
-
 import info.bitrich.xchangestream.binance.KlineSubscription;
 import info.bitrich.xchangestream.binancefuture.BinanceFutureStreamingExchange;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -33,6 +18,16 @@ import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.*;
+
+import static info.bitrich.xchangestream.binance.BinanceStreamingExchange.USE_REALTIME_BOOK_TICKER;
+import static info.bitrich.xchangestream.binance.examples.Util.printOrderBookShortInfo;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
+import static org.knowm.xchange.binance.dto.marketdata.KlineInterval.d1;
+import static org.knowm.xchange.binance.dto.marketdata.KlineInterval.m1;
+
 @Ignore
 public class BinanceFutureStreamPublicTest {
 
@@ -41,7 +36,7 @@ public class BinanceFutureStreamPublicTest {
   BinanceFutureStreamingExchange binanceFutureStreamingExchange;
   private static final Instrument instrument = new FuturesContract("ETH/USDT/PERP");
   private static final Instrument instrument2 = new FuturesContract("SOL/USDT/PERP");
-  private static final boolean logOutput = false;
+  private static final boolean logOutput = true;
 
   @Before
   public void setUp() {
@@ -114,12 +109,12 @@ public class BinanceFutureStreamPublicTest {
                   assertThat(orderBook.getBids().get(0).getLimitPrice())
                       .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
                   assertThat(
-                          orderBook
-                                  .getAsks()
-                                  .get(0)
-                                  .getLimitPrice()
-                                  .compareTo(orderBook.getBids().get(0).getLimitPrice())
-                              > 0)
+                      orderBook
+                          .getAsks()
+                          .get(0)
+                          .getLimitPrice()
+                          .compareTo(orderBook.getBids().get(0).getLimitPrice())
+                          > 0)
                       .isTrue();
                 }));
     disposables.add(
@@ -181,42 +176,38 @@ public class BinanceFutureStreamPublicTest {
   }
 
   @Ignore
+  @Test
   public void heavyLoadTest() throws InterruptedException {
     List<Disposable> disposables = new ArrayList<>();
     ProductSubscription subscription =
         exchange.getExchangeInstruments().stream()
             .filter(instrument -> instrument instanceof FuturesContract)
-            .limit(50)
+            .limit(150)
             .reduce(
                 ProductSubscription.create(),
-                ProductSubscription.ProductSubscriptionBuilder::addOrderbook,
+                ProductSubscription.ProductSubscriptionBuilder::addFundingRates,
                 (productSubscriptionBuilder, productSubscriptionBuilder2) -> {
                   throw new UnsupportedOperationException();
                 })
-            .addOrderbook(instrument)
+            .addFundingRates(instrument)
             .build();
     exchange.connect(subscription).blockingAwait();
-    disposables.add(
-        exchange
-            .getStreamingMarketDataService()
-            .getOrderBook(instrument)
-            .subscribe(
-                orderBook -> {
-                  if (logOutput) {
-                    printOrderBookShortInfo(orderBook);
-                  }
-                  assertThat(orderBook.getBids().get(0).getLimitPrice())
-                      .isLessThan(orderBook.getAsks().get(0).getLimitPrice());
-                  assertThat(
-                          orderBook
-                                  .getAsks()
-                                  .get(0)
-                                  .getLimitPrice()
-                                  .compareTo(orderBook.getBids().get(0).getLimitPrice())
-                              > 0)
-                      .isTrue();
-                }));
-    Thread.sleep(3000);
+    for (var s : subscription.getFundingRates()) {
+      disposables.add(
+          exchange
+              .getStreamingMarketDataService()
+              .getFundingRate(s)
+              .subscribe(
+                  fund -> {
+                    if (logOutput) {
+                      Random random = new Random();
+                      if (random.nextInt(100) == 1) {
+                        System.out.println("fund subscribe: " + fund);
+                      }
+                    }
+                  }));
+    }
+    Thread.sleep(30000000);
     disposables.forEach(Disposable::dispose);
     exchange.disconnect().blockingAwait();
   }
