@@ -1,9 +1,5 @@
 package info.bitrich.xchangestream.core;
 
-import static info.bitrich.xchangestream.service.netty.NettyStreamingService.DEFAULT_CONNECTION_TIMEOUT;
-import static info.bitrich.xchangestream.service.netty.NettyStreamingService.DEFAULT_IDLE_TIMEOUT;
-import static info.bitrich.xchangestream.service.netty.NettyStreamingService.DEFAULT_RETRY_DURATION;
-
 import info.bitrich.xchangestream.service.ConnectableService;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import info.bitrich.xchangestream.service.netty.NettyStreamingService;
@@ -12,6 +8,10 @@ import io.reactivex.rxjava3.core.Observable;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
+
+import java.time.Duration;
+
+import static info.bitrich.xchangestream.service.netty.NettyStreamingService.*;
 
 public interface StreamingExchange extends Exchange {
   String ACCEPT_ALL_CERITICATES = "Accept_All_Ceriticates";
@@ -166,5 +166,9 @@ public interface StreamingExchange extends Exchange {
     Boolean autoReconnect =
         (Boolean) exchangeSpec.getExchangeSpecificParametersItem(AUTO_RECONNECT);
     if (autoReconnect != null) streamingService.setAutoReconnect(autoReconnect);
+  }
+
+  default void applyWebsocketRetryTimeout(Duration timeout) {
+    throw new NotYetImplementedForExchangeException("applyWSRetryTimeout");
   }
 }

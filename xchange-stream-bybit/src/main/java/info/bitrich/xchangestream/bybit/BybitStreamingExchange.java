@@ -5,12 +5,14 @@ import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
-import java.util.ArrayList;
-import java.util.List;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BybitStreamingExchange extends BybitExchange implements StreamingExchange {
 
@@ -200,5 +202,12 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
     if (streamingUserDataService != null) {
       streamingUserDataService.resubscribeChannels();
     }
+  }
+
+  @Override
+  public void applyWebsocketRetryTimeout(Duration timeout) {
+    streamingService.setRetryDuration(timeout);
+    streamingUserTradeService.setRetryDuration(timeout);
+    streamingUserDataService.setRetryDuration(timeout);
   }
 }
