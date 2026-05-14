@@ -429,8 +429,11 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
   @Override
   public void applyWebsocketRetryTimeout(Duration timeout) {
     streamingService.setRetryDuration(timeout);
-    userDataFutureStreamingService.setRetryDuration(timeout);
-    userDataSpotStreamingService.setRetryDuration(timeout);
-    userTradeStreamingService.setRetryDuration(timeout);
+    if (userDataFutureStreamingService != null)
+      userDataFutureStreamingService.setRetryDuration(timeout);
+    if (userDataSpotStreamingService != null)
+      userDataSpotStreamingService.setRetryDuration(timeout);
+    if (userTradeStreamingService != null)
+      userTradeStreamingService.setRetryDuration(timeout);
   }
 }
