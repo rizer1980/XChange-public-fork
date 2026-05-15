@@ -187,7 +187,7 @@ public abstract class NettyStreamingService<T> extends ConnectableService {
                         this::messageHandler);
 
                 if (eventLoopGroup == null || eventLoopGroup.isShutdown()) {
-                  eventLoopGroup = new MultiThreadIoEventLoopGroup(2,NioIoHandler.newFactory());
+                  eventLoopGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
                 }
 
                 Bootstrap bootstrap =
