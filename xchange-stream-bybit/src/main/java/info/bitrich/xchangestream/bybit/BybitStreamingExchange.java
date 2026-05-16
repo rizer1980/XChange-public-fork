@@ -86,8 +86,8 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
     apiUrl +=
         "/"
             + ((BybitCategory)
-                    exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE))
-                .getValue();
+            exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE))
+            .getValue();
     return apiUrl;
   }
 
@@ -207,7 +207,8 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
   @Override
   public void applyWebsocketRetryTimeout(Duration timeout) {
     streamingService.setRetryDuration(timeout);
-    streamingUserTradeService.setRetryDuration(timeout);
+    if (streamingUserDataService != null)
+      streamingUserTradeService.setRetryDuration(timeout);
     streamingUserDataService.setRetryDuration(timeout);
   }
 }

@@ -190,7 +190,8 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
   @Override
   public void applyWebsocketRetryTimeout(Duration timeout) {
     streamingService.setRetryDuration(timeout);
-    privateStreamingService.setRetryDuration(timeout);
+    if (privateStreamingService != null)
+      privateStreamingService.setRetryDuration(timeout);
     businessStreamingService.setRetryDuration(timeout);
   }
 }
