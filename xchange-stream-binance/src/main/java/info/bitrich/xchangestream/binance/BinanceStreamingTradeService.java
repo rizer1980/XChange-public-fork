@@ -4,6 +4,7 @@ import static info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransac
 import static info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransaction.BinanceWebSocketTypes.ORDER_TRADE_UPDATE;
 import static info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransaction.BinanceWebSocketTypes.TRADE_LITE;
 import static org.knowm.xchange.binance.BinanceResilience.ORDERS_PER_10_SECONDS_RATE_LIMITER;
+import static org.knowm.xchange.binance.BinanceResilience.ORDERS_PER_DAY_RATE_LIMITER;
 import static org.knowm.xchange.binance.BinanceResilience.ORDERS_PER_MINUTE_RATE_LIMITER;
 import static org.knowm.xchange.binance.BinanceResilience.REQUEST_WEIGHT_RATE_LIMITER;
 
@@ -12,6 +13,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import info.bitrich.xchangestream.binance.dto.BaseBinanceWebSocketTransaction.BinanceWebSocketTypes;
 import info.bitrich.xchangestream.binance.dto.account.AccountUpdateBinanceWebSocketTransaction;
+import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderCancelAndReplaceResponse;
 import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderResponse;
 import info.bitrich.xchangestream.binance.dto.trade.ExecutionReportBinanceUserTransaction;
 import info.bitrich.xchangestream.binance.dto.trade.ExecutionReportBinanceUserTransaction.ExecutionType;
@@ -67,41 +69,50 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
   private volatile Disposable positionChanges;
   private final BinanceExchange exchange;
   private final ResilienceRegistries resilienceRegistries;
-  private volatile BinanceUserDataStreamingService binanceUserDataStreamingService;
-  @Setter private volatile BinanceUserTradeStreamingService binanceUserTradeStreamingService;
+  private volatile BinanceUserDataFutureStreamingService binanceUserDataFutureStreamingService;
+  private volatile BinanceUserDataSpotStreamingService binanceUserDataSpotStreamingService;
+  @Setter
+  private volatile BinanceUserTradeStreamingService binanceUserTradeStreamingService;
 
   private final ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
 
   public BinanceStreamingTradeService(
       BinanceExchange exchange,
-      BinanceUserDataStreamingService binanceUserDataStreamingService,
+      BinanceUserDataFutureStreamingService binanceUserDataFutureStreamingService,
+      BinanceUserDataSpotStreamingService binanceUserDataSpotStreamingService,
       BinanceUserTradeStreamingService binanceUserTradeStreamingService,
       ResilienceRegistries resilienceRegistries) {
     this.resilienceRegistries = resilienceRegistries;
     this.exchange = exchange;
-    this.binanceUserDataStreamingService = binanceUserDataStreamingService;
+    this.binanceUserDataFutureStreamingService = binanceUserDataFutureStreamingService;
+    this.binanceUserDataSpotStreamingService = binanceUserDataSpotStreamingService;
     this.binanceUserTradeStreamingService = binanceUserTradeStreamingService;
   }
 
   public Observable<ExecutionReportBinanceUserTransaction> getRawExecutionReports() {
-    if (binanceUserDataStreamingService == null
-        || !binanceUserDataStreamingService.isSocketOpen()) {
+    if (exchange.isFuturesEnabled()) { // portfolio margin mode
+      if (binanceUserDataFutureStreamingService == null
+          || !binanceUserDataFutureStreamingService.isSocketOpen()) {
+        throw new ExchangeSecurityException("Not authenticated");
+      }
+    } else if (binanceUserDataSpotStreamingService == null
+        || !binanceUserDataSpotStreamingService.isSocketOpen()) {
       throw new ExchangeSecurityException("Not authenticated");
     }
     return executionReportsPublisher;
   }
 
   public Observable<OrderTradeUpdateBinanceWebSocketTransaction> getRawOrderTradeUpdate() {
-    if (binanceUserDataStreamingService == null
-        || !binanceUserDataStreamingService.isSocketOpen()) {
+    if (binanceUserDataFutureStreamingService == null
+        || !binanceUserDataFutureStreamingService.isSocketOpen()) {
       throw new ExchangeSecurityException("Not authenticated");
     }
     return orderTradeUpdatePublisher;
   }
 
   public Observable<TradeLiteBinanceWebsocketTransaction> getRawTradeLite() {
-    if (binanceUserDataStreamingService == null
-        || !binanceUserDataStreamingService.isSocketOpen()) {
+    if (binanceUserDataFutureStreamingService == null
+        || !binanceUserDataFutureStreamingService.isSocketOpen()) {
       throw new ExchangeSecurityException("Not authenticated");
     }
     return tradeLitePublisher;
@@ -109,8 +120,8 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
 
   public Observable<AccountUpdateBinanceWebSocketTransaction> getRawPositionChanges(
       boolean isFuture) {
-    if (binanceUserDataStreamingService == null
-        || !binanceUserDataStreamingService.isSocketOpen()) {
+    if (binanceUserDataFutureStreamingService == null
+        || !binanceUserDataFutureStreamingService.isSocketOpen()) {
       throw new ExchangeSecurityException("Not authenticated");
     }
     return positionChangesPublisher;
@@ -193,22 +204,7 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
   public Single<Integer> placeOrder(Order order) {
     if (binanceUserTradeStreamingService.isAuthorized()) {
       if (exchange.isFuturesEnabled()) {
-        Observable<Integer> observable =
-            binanceUserTradeStreamingService
-                .subscribeChannel(String.valueOf(System.nanoTime()), "order.place", order)
-                .flatMap(
-                    node -> {
-                      TypeReference<BinanceWebsocketOrderResponse<BinanceNewOrder>> typeReference =
-                          new TypeReference<>() {};
-                      BinanceWebsocketOrderResponse<BinanceNewOrder> response =
-                          mapper.treeToValue(node, typeReference);
-                      if (response.getStatus() == 200) {
-                        return Observable.just(0);
-                      } else {
-                        return Observable.just(response.getError().getCode());
-                      }
-                    });
-        return observable
+        return placeOrderInternal(order)
             .firstOrError()
             .compose(
                 RateLimiterOperator.of(
@@ -221,32 +217,69 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
                         .rateLimiters()
                         .rateLimiter(ORDERS_PER_MINUTE_RATE_LIMITER)));
       } else {
-        throw new UnsupportedOperationException("Only futures supported");
+        if (exchange.isSpotEnabled()) {
+          return placeOrderInternal(order)
+              .firstOrError()
+              .compose(
+                  RateLimiterOperator.of(
+                      resilienceRegistries
+                          .rateLimiters()
+                          .rateLimiter(ORDERS_PER_10_SECONDS_RATE_LIMITER)))
+              .compose(
+                  RateLimiterOperator.of(
+                      resilienceRegistries.rateLimiters().rateLimiter(ORDERS_PER_DAY_RATE_LIMITER)))
+              .compose(
+                  RateLimiterOperator.of(
+                      resilienceRegistries
+                          .rateLimiters()
+                          .rateLimiter(REQUEST_WEIGHT_RATE_LIMITER)));
+        } else {
+          throw new UnsupportedOperationException("Only spot and futures supported");
+        }
       }
     } else {
       throw new UnsupportedOperationException("binanceUserTradeStreamingService not authorized");
     }
   }
 
-  public Single<Integer> changeOrder(LimitOrder limitOrder) {
+  private Observable<Integer> placeOrderInternal(Order order) {
+    return binanceUserTradeStreamingService
+        .subscribeChannel(String.valueOf(System.nanoTime()), "order.place", order)
+        .flatMap(
+            node -> {
+              TypeReference<BinanceWebsocketOrderResponse<BinanceNewOrder>> typeReference =
+                  new TypeReference<>() {
+                  };
+              BinanceWebsocketOrderResponse<BinanceNewOrder> response =
+                  mapper.treeToValue(node, typeReference);
+              if (response.getStatus() == 200) {
+                return Observable.just(0);
+              } else {
+                assert response.getError() != null;
+                return Observable.just(response.getError().getCode());
+              }
+            });
+  }
+
+  public Single<Integer> changeOrder(LimitOrder limitOrder, CancelOrderParams... orderParams) {
     if (binanceUserTradeStreamingService.isAuthorized()) {
       if (exchange.isFuturesEnabled()) {
-        Observable<Integer> observable =
-            binanceUserTradeStreamingService
-                .subscribeChannel(String.valueOf(System.nanoTime()), "order.modify", limitOrder)
-                .flatMap(
-                    node -> {
-                      TypeReference<BinanceWebsocketOrderResponse<BinanceNewOrder>> typeReference =
-                          new TypeReference<>() {};
-                      BinanceWebsocketOrderResponse<BinanceNewOrder> response =
-                          mapper.treeToValue(node, typeReference);
-                      if (response.getStatus() == 200) {
-                        return Observable.just(0);
-                      } else {
-                        return Observable.just(response.getError().getCode());
-                      }
-                    });
-        return observable
+        return binanceUserTradeStreamingService
+            .subscribeChannel(String.valueOf(System.nanoTime()), "order.modify", limitOrder)
+            .flatMap(
+                node -> {
+                  TypeReference<BinanceWebsocketOrderResponse<BinanceNewOrder>> typeReference =
+                      new TypeReference<>() {
+                      };
+                  BinanceWebsocketOrderResponse<BinanceNewOrder> response =
+                      mapper.treeToValue(node, typeReference);
+                  if (response.getStatus() == 200) {
+                    return Observable.just(0);
+                  } else {
+                    assert response.getError() != null;
+                    return Observable.just(response.getError().getCode());
+                  }
+                })
             .firstOrError()
             .compose(
                 RateLimiterOperator.of(
@@ -258,9 +291,46 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
                     resilienceRegistries
                         .rateLimiters()
                         .rateLimiter(ORDERS_PER_MINUTE_RATE_LIMITER)));
+      } else if (exchange.isSpotEnabled()) {
+        // Cancel an existing order and immediately place a new order instead of the canceled one.
+        return binanceUserTradeStreamingService
+            .subscribeChannel(
+                String.valueOf(System.nanoTime()),
+                "order.cancelReplace",
+                limitOrder,
+                orderParams[0])
+            .flatMap(
+                node -> {
+                  TypeReference<
+                      BinanceWebsocketOrderResponse<
+                          BinanceWebsocketOrderCancelAndReplaceResponse>>
+                      typeReference = new TypeReference<>() {
+                  };
+                  BinanceWebsocketOrderResponse<BinanceWebsocketOrderCancelAndReplaceResponse>
+                      response = mapper.treeToValue(node, typeReference);
+                  if (response.getStatus() == 200) {
+                    return Observable.just(0);
+                  } else {
+                    assert response.getError() != null;
+                    return Observable.just(response.getError().getCode());
+                  }
+                })
+            .firstOrError()
+            .compose(
+                RateLimiterOperator.of(
+                    resilienceRegistries
+                        .rateLimiters()
+                        .rateLimiter(ORDERS_PER_10_SECONDS_RATE_LIMITER)))
+            .compose(
+                RateLimiterOperator.of(
+                    resilienceRegistries.rateLimiters().rateLimiter(ORDERS_PER_DAY_RATE_LIMITER)))
+            .compose(
+                RateLimiterOperator.of(
+                    resilienceRegistries.rateLimiters().rateLimiter(REQUEST_WEIGHT_RATE_LIMITER)));
       } else {
-        throw new UnsupportedOperationException("Only futures supported");
+        throw new UnsupportedOperationException("Only spot and futures supported");
       }
+
     } else {
       throw new UnsupportedOperationException("binanceUserTradeStreamingService not authorized");
     }
@@ -268,19 +338,21 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
 
   public Single<Integer> cancelOrder(CancelOrderParams orderParams) {
     if (binanceUserTradeStreamingService.isAuthorized()) {
-      if (exchange.isFuturesEnabled()) {
+      if (exchange.isFuturesEnabled() || exchange.isSpotEnabled()) {
         Observable<Integer> observable =
             binanceUserTradeStreamingService
                 .subscribeChannel(String.valueOf(System.nanoTime()), "order.cancel", orderParams)
                 .flatMap(
                     node -> {
                       TypeReference<BinanceWebsocketOrderResponse<BinanceNewOrder>> typeReference =
-                          new TypeReference<>() {};
+                          new TypeReference<>() {
+                          };
                       BinanceWebsocketOrderResponse<BinanceNewOrder> response =
                           mapper.treeToValue(node, typeReference);
                       if (response.getStatus() == 200) {
                         return Observable.just(0);
                       } else {
+                        assert response.getError() != null;
                         return Observable.just(response.getError().getCode());
                       }
                     });
@@ -297,41 +369,46 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
     }
   }
 
-  /** Registers subsriptions with the streaming service for the given products. */
+  /**
+   * Registers subsriptions with the streaming service for the given products.
+   */
   public void openSubscriptions() {
-    if (binanceUserDataStreamingService != null) {
+    if (binanceUserDataFutureStreamingService != null) {
       executionReports =
-          binanceUserDataStreamingService
+          binanceUserDataFutureStreamingService
               .subscribeChannel(EXECUTION_REPORT)
               .map(this::executionReport)
               .subscribe(executionReportsPublisher::onNext);
       orderTradeUpdate =
-          binanceUserDataStreamingService
+          binanceUserDataFutureStreamingService
               .subscribeChannel(ORDER_TRADE_UPDATE)
               .map(this::orderTradeUpdate)
               .subscribe(orderTradeUpdatePublisher::onNext);
       tradeLite =
-          binanceUserDataStreamingService
+          binanceUserDataFutureStreamingService
               .subscribeChannel(TRADE_LITE)
               .map(this::tradeLite)
               .subscribe(tradeLitePublisher::onNext);
       positionChanges =
-          binanceUserDataStreamingService
+          binanceUserDataFutureStreamingService
               .subscribeChannel(BinanceWebSocketTypes.ACCOUNT_UPDATE)
               .map(this::positionChanges)
               .subscribe(positionChangesPublisher::onNext);
-
-      binanceUserDataStreamingService.setEnableLoggingHandler(true);
+    }
+    if (binanceUserDataSpotStreamingService != null) {
+      executionReports =
+          binanceUserDataSpotStreamingService
+              .subscribeChannel(EXECUTION_REPORT)
+              .map(this::executionReport)
+              .subscribe(executionReportsPublisher::onNext);
     }
   }
 
   /**
-   * User data subscriptions may have to persist across multiple socket connections to different
-   * URLs and therefore must act in a publisher fashion so that subscribers get an uninterrupted
-   * stream.
+   * User data subscriptions may have to persist across multiple socket connections to different URLs and therefore must act in a publisher fashion so that subscribers get an uninterrupted stream.
    */
-  void setUserDataStreamingService(
-      BinanceUserDataStreamingService binanceUserDataStreamingService) {
+  void setUserDataFutureStreamingService(
+      BinanceUserDataFutureStreamingService binanceUserDataFutureStreamingService) {
     if (executionReports != null && !executionReports.isDisposed()) {
       executionReports.dispose();
     }
@@ -344,7 +421,7 @@ public class BinanceStreamingTradeService implements StreamingTradeService {
     if (positionChanges != null && !positionChanges.isDisposed()) {
       positionChanges.dispose();
     }
-    this.binanceUserDataStreamingService = binanceUserDataStreamingService;
+    this.binanceUserDataFutureStreamingService = binanceUserDataFutureStreamingService;
     openSubscriptions();
   }
 
