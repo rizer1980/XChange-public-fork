@@ -15,14 +15,14 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
-import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.okex.OkexExchange;
-import org.knowm.xchange.okex.dto.trade.OkexTradeParams.OkexCancelOrderParams;
+import org.knowm.xchange.okex.dto.trade.OkexTradeParams;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,6 @@ public class OkexWebsocketTradeTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(OkexWebsocketTradeTest.class);
   StreamingExchange exchange;
-  private final Instrument instrument = new FuturesContract("SOL/USDT/SWAP");
   private final boolean logOutput = false;
 
   @Before
@@ -81,7 +80,16 @@ public class OkexWebsocketTradeTest {
   }
 
   @Test
-  public void websocketTradeTest() throws IOException, InterruptedException {
+  public void websocketFuturesTradeTest() throws IOException, InterruptedException {
+    tradeTest(new FuturesContract("SOL/USDT/SWAP"));
+  }
+
+  @Test
+  public void websocketSpotTradeTest() throws IOException, InterruptedException {
+    tradeTest(new CurrencyPair("SOL/USDT"));
+  }
+
+  private void tradeTest(Instrument instrument) throws IOException, InterruptedException {
     OkexStreamingTradeService tradeService =
         (OkexStreamingTradeService) exchange.getStreamingTradeService();
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
@@ -89,7 +97,7 @@ public class OkexWebsocketTradeTest {
         exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
     BigDecimal amount =
         getMinAmount(
-            new BigDecimal("5"),
+            new BigDecimal("10"),
             minAmount,
             ticker,
             exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
@@ -134,7 +142,8 @@ public class OkexWebsocketTradeTest {
     if (logOutput) {
       LOG.info("changeOrder disposed: {}", placeLimitOrderChangeDisposable.isDisposed());
     }
-    CancelOrderParams params = new OkexCancelOrderParams(instrument, limitOrderUserId);
+    CancelOrderParams params =
+        new OkexTradeParams.OkexCancelOrderParams(instrument, null, limitOrderUserId);
     Disposable cancelOrderDisposable =
         tradeService
             .cancelOrder(params)
@@ -151,7 +160,7 @@ public class OkexWebsocketTradeTest {
     }
     String marketOrderUserId = RandomStringUtils.randomAlphanumeric(20);
     MarketOrder marketOrder =
-        new MarketOrder.Builder(Order.OrderType.ASK, instrument)
+        new MarketOrder.Builder(BID, instrument)
             .userReference(marketOrderUserId)
             .originalAmount(amount)
             .build();

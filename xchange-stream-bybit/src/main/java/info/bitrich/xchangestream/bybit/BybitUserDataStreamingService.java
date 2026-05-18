@@ -1,10 +1,8 @@
 package info.bitrich.xchangestream.bybit;
 
-import static org.knowm.xchange.utils.DigestUtils.bytesToHex;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import dto.BybitSubscribeMessage;
+import info.bitrich.xchangestream.bybit.dto.BybitSubscribeMessage;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
 import info.bitrich.xchangestream.service.netty.WebSocketClientCompressionAllowClientNoContextHandler;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
@@ -13,20 +11,6 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableSource;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import lombok.Getter;
 import lombok.Setter;
 import org.knowm.xchange.ExchangeSpecification;
@@ -34,6 +18,25 @@ import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.service.BaseParamsDigest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static info.bitrich.xchangestream.core.StreamingExchange.*;
+import static org.knowm.xchange.utils.DigestUtils.bytesToHex;
 
 public class BybitUserDataStreamingService extends JsonNettyStreamingService {
 
@@ -45,7 +48,12 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
   @Setter private WebSocketClientHandler.WebSocketMessageHandler channelInactiveHandler = null;
 
   public BybitUserDataStreamingService(String url, ExchangeSpecification spec) {
-    super(url);
+    super(
+        url,
+        65536,
+        (Duration) spec.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+        (Duration) spec.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
+        (Integer) spec.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.spec = spec;
   }
 
@@ -136,6 +144,7 @@ public class BybitUserDataStreamingService extends JsonNettyStreamingService {
         case "auth":
           {
             isAuthorized = true;
+            LOG.info("Successfully authenticated to data URI");
             resubscribeChannelsAfterLogin();
             break;
           }

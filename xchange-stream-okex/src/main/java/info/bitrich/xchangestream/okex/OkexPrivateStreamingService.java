@@ -1,5 +1,8 @@
 package info.bitrich.xchangestream.okex;
 
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_CONNECTION_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_IDLE_TIMEOUT;
+import static info.bitrich.xchangestream.core.StreamingExchange.WS_RETRY_DURATION;
 import static info.bitrich.xchangestream.okex.OkexStreamingService.SUBSCRIBE;
 import static info.bitrich.xchangestream.okex.OkexStreamingService.UNSUBSCRIBE;
 
@@ -17,6 +20,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
@@ -61,7 +65,12 @@ public class OkexPrivateStreamingService extends JsonNettyStreamingService {
       String privateApiUrl,
       ExchangeSpecification exchangeSpecification,
       OkexExchange okexExchange) {
-    super(privateApiUrl);
+    super(
+        privateApiUrl,
+        65536,
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_CONNECTION_TIMEOUT),
+        (Duration) exchangeSpecification.getExchangeSpecificParametersItem(WS_RETRY_DURATION),
+        (Integer) exchangeSpecification.getExchangeSpecificParametersItem(WS_IDLE_TIMEOUT));
     this.exchangeSpecification = exchangeSpecification;
     this.okexExchange = okexExchange;
   }
@@ -152,6 +161,7 @@ public class OkexPrivateStreamingService extends JsonNettyStreamingService {
     } catch (IOException e) {
       if ("pong".equals(message)) {
         // ping pong message
+        LOG.debug("Received pong message: {}", message);
         return;
       }
       LOG.error("Error parsing incoming message to JSON: {}", message);
