@@ -8,13 +8,13 @@ import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
+import java.util.ArrayList;
+import java.util.List;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.knowm.xchange.okex.OkexExchange;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 
 public class OkexStreamingExchange extends OkexExchange implements StreamingExchange {
 
@@ -40,8 +40,7 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
   private OkexPrivateStreamingService privateStreamingService;
   private OkexBusinessStreamingService businessStreamingService;
 
-  public OkexStreamingExchange() {
-  }
+  public OkexStreamingExchange() {}
 
   @Override
   public Completable connect(ProductSubscription... args) {
@@ -53,10 +52,12 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
           new OkexPrivateStreamingService(getPrivateApiUrl(), exchangeSpecification, this);
       applyStreamingSpecification(exchangeSpecification, privateStreamingService);
     }
-    businessStreamingService = new OkexBusinessStreamingService(getBusinessApiUrl(), exchangeSpecification);
+    businessStreamingService =
+        new OkexBusinessStreamingService(getBusinessApiUrl(), exchangeSpecification);
     applyStreamingSpecification(exchangeSpecification, businessStreamingService);
     streamingMarketDataService =
-        new OkexStreamingMarketDataService(streamingService, businessStreamingService, exchangeMetaData);
+        new OkexStreamingMarketDataService(
+            streamingService, businessStreamingService, exchangeMetaData);
     streamingTradeService =
         new OkexStreamingTradeService(
             privateStreamingService, exchangeMetaData, getResilienceRegistries());
@@ -175,6 +176,10 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
 
   public Observable<State> connectionStateObservablePrivateChannel() {
     return privateStreamingService.subscribeConnectionState();
+  }
+
+  public Observable<State> connectionStateObservableBusinessChannel() {
+    return businessStreamingService.subscribeConnectionState();
   }
 
   @Override
