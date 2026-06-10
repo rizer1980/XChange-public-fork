@@ -93,7 +93,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
    * time.
    *
    * @param args A single `ProductSubscription` to define the subscriptions required to be available
-   *     during this connection.
+   *             during this connection.
    * @return A completable which fulfils once connection is complete.
    */
   @Override
@@ -326,7 +326,7 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
             + routedPath
             + "stream?streams="
             + URLEncoder.encode(
-                buildSubscriptionStreams(subscription, klineSubscription), StandardCharsets.UTF_8);
+            buildSubscriptionStreams(subscription, klineSubscription), StandardCharsets.UTF_8);
 
     BinanceStreamingService streamingService =
         new BinanceStreamingService(
@@ -449,7 +449,8 @@ public class BinanceStreamingExchange extends BinanceExchange implements Streami
 
   @Override
   public void applyWebsocketRetryTimeout(Duration timeout) {
-    streamingService.setRetryDuration(timeout);
+    if (streamingService != null)
+      streamingService.setRetryDuration(timeout);
     if (userDataFutureStreamingService != null)
       userDataFutureStreamingService.setRetryDuration(timeout);
     if (userDataSpotStreamingService != null)

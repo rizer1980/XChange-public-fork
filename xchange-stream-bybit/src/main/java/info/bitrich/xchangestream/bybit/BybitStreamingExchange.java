@@ -206,9 +206,11 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
 
   @Override
   public void applyWebsocketRetryTimeout(Duration timeout) {
-    streamingService.setRetryDuration(timeout);
+    if (streamingService != null)
+      streamingService.setRetryDuration(timeout);
     if (streamingUserDataService != null)
       streamingUserTradeService.setRetryDuration(timeout);
-    streamingUserDataService.setRetryDuration(timeout);
+    if (streamingUserDataService != null)
+      streamingUserDataService.setRetryDuration(timeout);
   }
 }
