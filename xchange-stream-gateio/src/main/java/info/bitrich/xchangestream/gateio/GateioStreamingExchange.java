@@ -1,14 +1,12 @@
 package info.bitrich.xchangestream.gateio;
 
-import info.bitrich.xchangestream.core.ProductSubscription;
-import info.bitrich.xchangestream.core.StreamingAccountService;
-import info.bitrich.xchangestream.core.StreamingExchange;
-import info.bitrich.xchangestream.core.StreamingMarketDataService;
-import info.bitrich.xchangestream.core.StreamingTradeService;
+import info.bitrich.xchangestream.core.*;
 import info.bitrich.xchangestream.gateio.config.Config;
 import io.reactivex.rxjava3.core.Completable;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.gateio.GateioExchange;
+
+import java.time.Duration;
 
 public class GateioStreamingExchange extends GateioExchange implements StreamingExchange {
 
@@ -75,5 +73,11 @@ public class GateioStreamingExchange extends GateioExchange implements Streaming
     specification.setShouldLoadRemoteMetaData(false);
     specification.setSslUri(Config.V4_URL);
     return specification;
+  }
+
+  @Override
+  public void applyWebsocketRetryTimeout(Duration timeout) {
+    if (streamingService != null)
+      streamingService.setRetryDuration(timeout);
   }
 }
