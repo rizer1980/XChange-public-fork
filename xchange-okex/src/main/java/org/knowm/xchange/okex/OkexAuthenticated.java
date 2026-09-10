@@ -1,44 +1,21 @@
 package org.knowm.xchange.okex;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.okex.dto.OkexException;
+import org.knowm.xchange.okex.dto.OkexResponse;
+import org.knowm.xchange.okex.dto.account.*;
+import org.knowm.xchange.okex.dto.marketdata.OkexCurrency;
+import org.knowm.xchange.okex.dto.subaccount.OkexSubAccountDetails;
+import org.knowm.xchange.okex.dto.trade.*;
+import si.mazi.rescu.ParamsDigest;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.knowm.xchange.currency.Currency;
-import org.knowm.xchange.okex.dto.OkexException;
-import org.knowm.xchange.okex.dto.OkexResponse;
-import org.knowm.xchange.okex.dto.account.OkexAccountConfig;
-import org.knowm.xchange.okex.dto.account.OkexAccountPositionRisk;
-import org.knowm.xchange.okex.dto.account.OkexAssetBalance;
-import org.knowm.xchange.okex.dto.account.OkexBillDetails;
-import org.knowm.xchange.okex.dto.account.OkexChangeMarginRequest;
-import org.knowm.xchange.okex.dto.account.OkexChangeMarginResponse;
-import org.knowm.xchange.okex.dto.account.OkexDepositAddress;
-import org.knowm.xchange.okex.dto.account.OkexPosition;
-import org.knowm.xchange.okex.dto.account.OkexSetLeverageRequest;
-import org.knowm.xchange.okex.dto.account.OkexSetLeverageResponse;
-import org.knowm.xchange.okex.dto.account.OkexTradeFee;
-import org.knowm.xchange.okex.dto.account.OkexWalletBalance;
-import org.knowm.xchange.okex.dto.account.OkexWithdrawalRequest;
-import org.knowm.xchange.okex.dto.account.OkexWithdrawalResponse;
-import org.knowm.xchange.okex.dto.account.PiggyBalance;
-import org.knowm.xchange.okex.dto.marketdata.OkexCurrency;
-import org.knowm.xchange.okex.dto.subaccount.OkexSubAccountDetails;
-import org.knowm.xchange.okex.dto.trade.OkexAmendOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexCancelOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
-import org.knowm.xchange.okex.dto.trade.OkexOrderRequest;
-import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
-import si.mazi.rescu.ParamsDigest;
 
 @Path("/api/v5")
 @Produces(MediaType.APPLICATION_JSON)
@@ -55,8 +32,7 @@ public interface OkexAuthenticated extends Okex {
   String accountPositionAtRiskPath = "/account/account-position-risk"; // Stated as 10 req/2 sec
   String setLeveragePath = "/account/set-leverage"; // Stated as 20 req/2 sec
   String pendingOrdersPath = "/trade/orders-pending"; // Stated as 20 req/2 sec
-  String orderDetailsPath = "/trade/order";
-  String placeOrderPath = "/trade/order"; // Stated as 60 req/2 sec
+  String orderPath = "/trade/order"; // Stated as 60 req/2 sec
   String placeBatchOrderPath = "/trade/batch-orders"; // Stated as 300 req/2 sec
   String cancelOrderPath = "/trade/cancel-order"; // Stated as 60 req/2 sec
   String cancelBatchOrderPath = "/trade/cancel-batch-orders"; // Stated as 300 req/2 sec
@@ -67,10 +43,15 @@ public interface OkexAuthenticated extends Okex {
   String subAccountList = "/users/subaccount/list"; // Stated as 2 req/2 sec
   String subAccountBalance = "/account/subaccount/balances"; // Stated as 2 req/2 sec
   String piggyBalance = "/asset/piggy-balance"; // Stated as 6 req/1 sec
-
+  String placeOrderWs = "placeOrderWs"; // Stated as 60 req/2 sec
+  String amendOrderWs = "amendOrderWs"; // Stated as 60 req/2 sec
+  String cancelOrderWs = "cancelOrderWs"; // Stated as 60 req/2 sec
+  String placeBatchOrderWs = "placeBatchOrderWs"; // Stated as 300 req/2 sec
+  String amendBatchOrderWs = "amendBatchOrderWs"; // Stated as 300 req/2 sec
+  String cancelBatchOrderWs = "cancelBatchOrderWs"; // Stated as 300 req/2 sec
   // To avoid 429s, actual req/second may need to be lowered!
   Map<String, List<Integer>> privatePathRateLimits =
-      new HashMap<String, List<Integer>>() {
+      new HashMap<>() {
         {
           put(balancePath, Arrays.asList(5, 1));
           put(currenciesPath, Arrays.asList(6, 1));
@@ -78,13 +59,6 @@ public interface OkexAuthenticated extends Okex {
           put(positionsPath, Arrays.asList(5, 1));
           put(setLeveragePath, Arrays.asList(20, 2));
           put(pendingOrdersPath, Arrays.asList(20, 2));
-          put(orderDetailsPath, Arrays.asList(60, 2));
-          put(placeOrderPath, Arrays.asList(60, 2));
-          put(placeBatchOrderPath, Arrays.asList(300, 2));
-          put(cancelOrderPath, Arrays.asList(60, 2));
-          put(cancelBatchOrderPath, Arrays.asList(300, 2));
-          put(amendOrderPath, Arrays.asList(60, 2));
-          put(amendBatchOrderPath, Arrays.asList(300, 2));
           put(depositAddressPath, Arrays.asList(6, 1));
           put(ordersHistoryPath, Arrays.asList(40, 2));
           put(tradeFeePath, Arrays.asList(5, 2));
@@ -94,6 +68,19 @@ public interface OkexAuthenticated extends Okex {
           put(subAccountList, Arrays.asList(2, 2));
           put(subAccountBalance, Arrays.asList(2, 2));
           put(piggyBalance, Arrays.asList(6, 1));
+        }
+      };
+
+  // do not wait timeout for time sensitivity call, such order (place, amend, etc...)
+  Map<String, List<Integer>> privatePathRateLimitsWs =
+      new HashMap<>() {
+        {
+          put(placeOrderWs, Arrays.asList(60, 20));
+          put(amendOrderWs, Arrays.asList(60, 2));
+          put(cancelOrderWs, Arrays.asList(60, 2));
+          put(placeBatchOrderWs, Arrays.asList(300, 2));
+          put(amendBatchOrderWs, Arrays.asList(300, 2));
+          put(cancelBatchOrderWs, Arrays.asList(300, 2));
         }
       };
 
@@ -279,7 +266,7 @@ public interface OkexAuthenticated extends Okex {
       throws OkexException, IOException;
 
   @GET
-  @Path(orderDetailsPath)
+  @Path(orderPath)
   OkexResponse<List<OkexOrderDetails>> getOrderDetails(
       @HeaderParam("OK-ACCESS-KEY") String apiKey,
       @HeaderParam("OK-ACCESS-SIGN") ParamsDigest signature,
@@ -326,7 +313,7 @@ public interface OkexAuthenticated extends Okex {
       throws OkexException, IOException;
 
   @POST
-  @Path(placeOrderPath)
+  @Path(orderPath)
   @Consumes(MediaType.APPLICATION_JSON)
   OkexResponse<List<OkexOrderResponse>> placeOrder(
       @HeaderParam("OK-ACCESS-KEY") String apiKey,
