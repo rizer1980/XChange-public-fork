@@ -509,8 +509,16 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
       // init update info for funding rate interval
       synchronized (this) {
         if (fundingRateInfoUpdate == null) {
+          long currentTimeMillis = System.currentTimeMillis();
+          long millisInHour = TimeUnit.HOURS.toMillis(1);
+          long nextHourMillis = ((currentTimeMillis / millisInHour) + 1) * millisInHour;
+          long delayToNextHour = nextHourMillis - currentTimeMillis;
+          // run every hour, 1 second after new hour, and 5 seconds after new hour for backup
           fundingRateInfoUpdate =
-              Observable.interval(10, 10, TimeUnit.MINUTES).subscribe(x -> updateFundingRateInfo());
+              Observable.interval(delayToNextHour + 1000, millisInHour, TimeUnit.MILLISECONDS)
+                  .flatMap(tick -> Observable.just(tick, tick).delay(i -> Objects.equals(i, tick) ?
+                      Observable.timer(0, TimeUnit.MILLISECONDS) : Observable.timer(4000, TimeUnit.MILLISECONDS)))
+                  .subscribe(x -> updateFundingRateInfo());
           updateFundingRateInfo();
         }
       }
@@ -527,7 +535,9 @@ public class BinanceStreamingMarketDataService implements StreamingMarketDataSer
                       it, FUNDING_RATE_TYPE, "funding rate"))
           .map(BinanceWebsocketTransaction::getData)
           .filter(data -> BinanceAdapters.adaptSymbol(data.getSymbol(), true).equals(instrument))
-          .map(transaction -> transaction.toFundingRate(fundingRateInfoMap.getOrDefault(instrument, 8)));
+          .map(
+              transaction ->
+                  transaction.toFundingRate(fundingRateInfoMap.getOrDefault(instrument, 8)));
     } catch (Exception e) {
       return Observable.error(e);
     }

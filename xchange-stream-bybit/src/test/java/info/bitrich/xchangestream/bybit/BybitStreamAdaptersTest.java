@@ -1,5 +1,12 @@
 package info.bitrich.xchangestream.bybit;
 
+import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.knowm.xchange.bybit.dto.BybitCategory.OPTION;
+import static org.knowm.xchange.bybit.dto.trade.BybitOrderType.MARKET;
+import static org.knowm.xchange.bybit.dto.trade.details.BybitTimeInForce.IOC;
+import static org.knowm.xchange.dto.Order.OrderStatus.FILLED;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,7 +14,12 @@ import info.bitrich.xchangestream.bybit.dto.BybitResponse;
 import info.bitrich.xchangestream.bybit.dto.marketdata.BybitOrderbook;
 import info.bitrich.xchangestream.bybit.dto.trade.*;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
-import org.junit.Test;
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.List;
+import java.util.Locale;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.derivative.OptionsContract;
@@ -19,25 +31,12 @@ import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.MarketOrder;
 
-import java.math.BigDecimal;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.util.List;
-import java.util.Locale;
-
-import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.*;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.knowm.xchange.bybit.dto.BybitCategory.OPTION;
-import static org.knowm.xchange.bybit.dto.trade.BybitOrderType.MARKET;
-import static org.knowm.xchange.bybit.dto.trade.details.BybitTimeInForce.IOC;
-import static org.knowm.xchange.dto.Order.OrderStatus.FILLED;
-
-public class BybitStreamAdaptersTest {
+class BybitStreamAdaptersTest {
 
   ObjectMapper mapper = StreamingObjectMapperHelper.getObjectMapper();
 
   @Test
-  public void adaptOrderBookTest() throws Exception {
+  void adaptOrderBookTest() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(
             ClassLoader.getSystemClassLoader()
@@ -56,7 +55,7 @@ public class BybitStreamAdaptersTest {
   }
 
   @Test
-  public void adaptTradesTest() throws Exception {
+  void adaptTradesTest() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(
             ClassLoader.getSystemClassLoader().getResourceAsStream("tradeResponse.json5"));
@@ -75,7 +74,7 @@ public class BybitStreamAdaptersTest {
   }
 
   @Test
-  public void adaptOrdersChangesTest() throws Exception {
+  void adaptOrdersChangesTest() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(
             ClassLoader.getSystemClassLoader().getResourceAsStream("orderChangeResponse.json5"));
@@ -103,7 +102,7 @@ public class BybitStreamAdaptersTest {
   }
 
   @Test
-  public void adaptPositionChanges() throws Exception {
+  void adaptPositionChanges() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(
             ClassLoader.getSystemClassLoader().getResourceAsStream("positionChangeResponse.json5"));
@@ -123,7 +122,7 @@ public class BybitStreamAdaptersTest {
   }
 
   @Test
-  public void adaptComplexPositionChanges() throws Exception {
+  void adaptComplexPositionChanges() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(
             ClassLoader.getSystemClassLoader().getResourceAsStream("positionChangeResponse.json5"));
@@ -170,7 +169,7 @@ public class BybitStreamAdaptersTest {
   }
 
   @Test
-  public void adaptComplexOrdersChangesTest() throws Exception {
+  void adaptComplexOrdersChangesTest() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(
             ClassLoader.getSystemClassLoader().getResourceAsStream("orderChangeResponse.json5"));
@@ -232,11 +231,10 @@ public class BybitStreamAdaptersTest {
   }
 
   @Test
-  public void adaptTickerSnapshotTest() throws Exception {
+  void adaptTickerSnapshotTest() throws Exception {
     JsonNode jsonNode =
         mapper.readTree(
-            ClassLoader.getSystemClassLoader()
-                .getResourceAsStream("tickerSnapshotResponse.json5"));
+            ClassLoader.getSystemClassLoader().getResourceAsStream("tickerSnapshotResponse.json5"));
     BybitResponse<BybitLinearInverseTicker> bybitResponse =
         mapper.treeToValue(jsonNode, new TypeReference<>() {});
 
@@ -266,12 +264,11 @@ public class BybitStreamAdaptersTest {
   }
 
   @Test
-  public void adaptTickerDeltaDeserializationTest() throws Exception {
+  void adaptTickerDeltaDeserializationTest() throws Exception {
     // Verify delta messages deserialize correctly with partial fields
     JsonNode jsonNode =
         mapper.readTree(
-            ClassLoader.getSystemClassLoader()
-                .getResourceAsStream("tickerDeltaResponse.json5"));
+            ClassLoader.getSystemClassLoader().getResourceAsStream("tickerDeltaResponse.json5"));
     BybitResponse<BybitLinearInverseTicker> bybitResponse =
         mapper.treeToValue(jsonNode, new TypeReference<>() {});
 
@@ -293,12 +290,11 @@ public class BybitStreamAdaptersTest {
   }
 
   @Test
-  public void adaptTickerDeltaMergeTest() throws Exception {
+  void adaptTickerDeltaMergeTest() throws Exception {
     // Load snapshot
     JsonNode snapshotNode =
         mapper.readTree(
-            ClassLoader.getSystemClassLoader()
-                .getResourceAsStream("tickerSnapshotResponse.json5"));
+            ClassLoader.getSystemClassLoader().getResourceAsStream("tickerSnapshotResponse.json5"));
     BybitResponse<BybitLinearInverseTicker> snapshotResponse =
         mapper.treeToValue(snapshotNode, new TypeReference<>() {});
     BybitLinearInverseTicker snapshot = snapshotResponse.getData();
@@ -306,33 +302,45 @@ public class BybitStreamAdaptersTest {
     // Load delta
     JsonNode deltaNode =
         mapper.readTree(
-            ClassLoader.getSystemClassLoader()
-                .getResourceAsStream("tickerDeltaResponse.json5"));
+            ClassLoader.getSystemClassLoader().getResourceAsStream("tickerDeltaResponse.json5"));
     BybitResponse<BybitLinearInverseTicker> deltaResponse =
         mapper.treeToValue(deltaNode, new TypeReference<>() {});
     BybitLinearInverseTicker delta = deltaResponse.getData();
 
     // Simulate merge: delta fields override snapshot, rest preserved
-    BybitLinearInverseTicker merged = BybitLinearInverseTicker.builder()
-        .symbol(snapshot.getSymbol())
-        .lastPrice(delta.getLastPrice() != null ? delta.getLastPrice() : snapshot.getLastPrice())
-        .bid1Price(delta.getBid1Price() != null ? delta.getBid1Price() : snapshot.getBid1Price())
-        .bid1Size(delta.getBid1Size() != null ? delta.getBid1Size() : snapshot.getBid1Size())
-        .ask1Price(delta.getAsk1Price() != null ? delta.getAsk1Price() : snapshot.getAsk1Price())
-        .ask1Size(delta.getAsk1Size() != null ? delta.getAsk1Size() : snapshot.getAsk1Size())
-        .highPrice24h(delta.getHighPrice24h() != null ? delta.getHighPrice24h() : snapshot.getHighPrice24h())
-        .lowPrice24h(delta.getLowPrice24h() != null ? delta.getLowPrice24h() : snapshot.getLowPrice24h())
-        .volume24h(delta.getVolume24h() != null ? delta.getVolume24h() : snapshot.getVolume24h())
-        .turnover24h(delta.getTurnover24h() != null ? delta.getTurnover24h() : snapshot.getTurnover24h())
-        .price24hPcnt(delta.getPrice24hPcnt() != null ? delta.getPrice24hPcnt() : snapshot.getPrice24hPcnt())
-        .indexPrice(snapshot.getIndexPrice())
-        .markPrice(snapshot.getMarkPrice())
-        .openInterest(snapshot.getOpenInterest())
-        .openInterestValue(snapshot.getOpenInterestValue())
-        .fundingRate(snapshot.getFundingRate())
-        .nextFundingTime(snapshot.getNextFundingTime())
-        .fundingIntervalHour(snapshot.getFundingIntervalHour())
-        .build();
+    BybitLinearInverseTicker merged =
+        BybitLinearInverseTicker.builder()
+            .symbol(snapshot.getSymbol())
+            .lastPrice(
+                delta.getLastPrice() != null ? delta.getLastPrice() : snapshot.getLastPrice())
+            .bid1Price(
+                delta.getBid1Price() != null ? delta.getBid1Price() : snapshot.getBid1Price())
+            .bid1Size(delta.getBid1Size() != null ? delta.getBid1Size() : snapshot.getBid1Size())
+            .ask1Price(
+                delta.getAsk1Price() != null ? delta.getAsk1Price() : snapshot.getAsk1Price())
+            .ask1Size(delta.getAsk1Size() != null ? delta.getAsk1Size() : snapshot.getAsk1Size())
+            .highPrice24h(
+                delta.getHighPrice24h() != null
+                    ? delta.getHighPrice24h()
+                    : snapshot.getHighPrice24h())
+            .lowPrice24h(
+                delta.getLowPrice24h() != null ? delta.getLowPrice24h() : snapshot.getLowPrice24h())
+            .volume24h(
+                delta.getVolume24h() != null ? delta.getVolume24h() : snapshot.getVolume24h())
+            .turnover24h(
+                delta.getTurnover24h() != null ? delta.getTurnover24h() : snapshot.getTurnover24h())
+            .price24hPcnt(
+                delta.getPrice24hPcnt() != null
+                    ? delta.getPrice24hPcnt()
+                    : snapshot.getPrice24hPcnt())
+            .indexPrice(snapshot.getIndexPrice())
+            .markPrice(snapshot.getMarkPrice())
+            .openInterest(snapshot.getOpenInterest())
+            .openInterestValue(snapshot.getOpenInterestValue())
+            .fundingRate(snapshot.getFundingRate())
+            .nextFundingTime(snapshot.getNextFundingTime())
+            .fundingIntervalHour(snapshot.getFundingIntervalHour())
+            .build();
 
     Ticker ticker = adaptTicker(merged);
 

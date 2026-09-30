@@ -23,8 +23,6 @@ Basic usage is very simple: Create an `Exchange` instance, get the appropriate s
 |------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | bitfinex         | [![status](https://github.com/knowm/XChange/actions/workflows/bitfinex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitfinex.yml)                  |
 | bitget           | [![status](https://github.com/knowm/XChange/actions/workflows/bitget.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitget.yml)                      |
-| bitmex           | [![status](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/bitmex.yaml)                     |
-| coinex           | [![status](https://github.com/knowm/XChange/actions/workflows/coinex.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/coinex.yaml)                     |
 | deribit          | [![status](https://github.com/knowm/XChange/actions/workflows/deribit.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/deribit.yaml)                   |
 | gate.io          | [![status](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/gateio-v4.yaml)               |
 | kraken           | [![status](https://github.com/knowm/XChange/actions/workflows/kraken.yaml/badge.svg)](https://github.com/knowm/XChange/actions/workflows/kraken.yaml)                     |
@@ -166,12 +164,12 @@ Add the following dependencies in your pom.xml file. You will need at least xcha
 <dependency>
   <groupId>org.knowm.xchange</groupId>
   <artifactId>xchange-core</artifactId>
-  <version>5.2.4</version>
+  <version>6.0.0</version>
 </dependency>
 <dependency>
   <groupId>org.knowm.xchange</groupId>
   <artifactId>xchange-XYZ</artifactId>
-  <version>5.2.4</version>
+  <version>6.0.0</version>
 </dependency>
 ```
 
@@ -181,7 +179,7 @@ If it is available for your exchange, you may also want to use the streaming API
 <dependency>
   <groupId>org.knowm.xchange</groupId>
   <artifactId>xchange-stream-XYZ</artifactId>
-  <version>5.2.4</version>
+  <version>6.0.0</version>
 </dependency>
 ```
 
@@ -203,7 +201,7 @@ For snapshots, add the following repository to your pom.xml file.
 
 The current snapshot version is:
 
-    5.2.5-SNAPSHOT
+    6.0.0-SNAPSHOT
 
 ## Building with Maven
 

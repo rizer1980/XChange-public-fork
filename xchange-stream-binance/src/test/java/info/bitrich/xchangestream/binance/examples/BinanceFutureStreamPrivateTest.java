@@ -1,7 +1,6 @@
 package info.bitrich.xchangestream.binance.examples;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.knowm.xchange.Exchange.USE_SANDBOX;
 import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
 
@@ -10,12 +9,10 @@ import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.io.IOException;
 import java.math.BigDecimal;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -28,8 +25,8 @@ import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore
-public class BinanceFutureStreamPrivateTest {
+@Disabled
+class BinanceFutureStreamPrivateTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(BinanceFutureStreamPrivateTest.class);
   private static StreamingExchange exchange;
@@ -38,20 +35,20 @@ public class BinanceFutureStreamPrivateTest {
   private static final Instrument instrument2 = new FuturesContract("SOL/USDT/PERP");
   private static final boolean logOutput = true;
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  void setUp() {
     ExchangeSpecification spec = new ExchangeSpecification(BinanceFutureStreamingExchange.class);
     // The most convenient way. Can store all keys in .ssh folder
     AuthUtils.setApiAndSecretKey(spec, "binance-main-ed25519"); // apikey and ed2519 private key
     spec.setExchangeSpecificParametersItem("ed25519", true);
-//    spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
+    //    spec.setExchangeSpecificParametersItem(USE_SANDBOX, true);
     spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, FUTURES);
     exchange = StreamingExchangeFactory.INSTANCE.createExchange(spec);
     binanceFutureStreamingExchange = (BinanceFutureStreamingExchange) exchange;
   }
 
   @Test
-  public void getOrderAndPositionChanges() throws IOException {
+  void getOrderAndPositionChanges() throws Exception {
     try {
       ProductSubscription subscription =
           ProductSubscription.create()
@@ -106,7 +103,8 @@ public class BinanceFutureStreamPrivateTest {
                     if (logOutput) {
                       LOG.info("positionChange2 subscribe: {}", positionChange2);
                     }
-                    Assert.assertEquals(BigDecimal.ZERO, positionChange2.getSize());
+                    org.assertj.core.api.Assertions.assertThat(positionChange2.getSize())
+                        .isEqualTo(BigDecimal.ZERO);
                   });
       Thread.sleep(3000);
       Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
@@ -141,5 +139,5 @@ public class BinanceFutureStreamPrivateTest {
   }
 
   @Test
-  public void getOrderAndPositionChangesPortfolioMarginMode() throws IOException {}
+  void getOrderAndPositionChangesPortfolioMarginMode() throws Exception {}
 }

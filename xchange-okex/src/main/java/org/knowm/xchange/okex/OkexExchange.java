@@ -1,5 +1,6 @@
 package org.knowm.xchange.okex;
 
+import static org.knowm.xchange.okex.OkexAdapters.adaptOkexInstrumentId;
 import static org.knowm.xchange.okex.dto.OkexInstType.SPOT;
 import static org.knowm.xchange.okex.dto.OkexInstType.SWAP;
 
@@ -15,6 +16,12 @@ import org.knowm.xchange.okex.service.OkexMarketDataService;
 import org.knowm.xchange.okex.service.OkexMarketDataServiceRaw;
 import org.knowm.xchange.okex.service.OkexTradeService;
 import si.mazi.rescu.SynchronizedValueFactory;
+
+import java.io.IOException;
+import java.util.List;
+
+import static org.knowm.xchange.okex.dto.OkexInstType.SPOT;
+import static org.knowm.xchange.okex.dto.OkexInstType.SWAP;
 
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkexExchange extends BaseExchange {
@@ -79,6 +86,16 @@ public class OkexExchange extends BaseExchange {
 
   @Override
   public void remoteInit() throws IOException {
+    updateExchangeMetaData();
+  }
+
+  protected boolean useSandbox() {
+    return Boolean.TRUE.equals(
+        exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX));
+  }
+
+  @Override
+  public void updateExchangeMetaData() throws IOException {
     List<OkexInstrument> instruments =
         ((OkexMarketDataServiceRaw) marketDataService)
             .getOkexInstruments(SPOT.name(), null, null)
@@ -91,6 +108,13 @@ public class OkexExchange extends BaseExchange {
 
     instruments.addAll(swap_instruments);
 
+    instruments.forEach(
+        instrument -> {
+          if (instrument.getInstIdCode() != null)
+            OkexAdapters.instrumentToInstrumentIdMap.put(
+                adaptOkexInstrumentId(instrument.getInstrumentId()),
+                Long.parseLong(instrument.getInstIdCode()));
+        });
     // Currency data is only retrievable through a private endpoint
     List<OkexCurrency> currencies = null;
     if (exchangeSpecification.getApiKey() != null
@@ -106,10 +130,5 @@ public class OkexExchange extends BaseExchange {
     }
 
     exchangeMetaData = OkexAdapters.adaptToExchangeMetaData(instruments, currencies);
-  }
-
-  protected boolean useSandbox() {
-    return Boolean.TRUE.equals(
-        exchangeSpecification.getExchangeSpecificParametersItem(USE_SANDBOX));
   }
 }

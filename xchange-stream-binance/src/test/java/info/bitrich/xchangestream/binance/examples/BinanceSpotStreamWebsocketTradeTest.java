@@ -5,17 +5,15 @@ import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
 import static org.knowm.xchange.binance.dto.ExchangeType.SPOT;
 
 import info.bitrich.xchangestream.binance.BinanceStreamingExchange;
-import info.bitrich.xchangestream.binance.BinanceStreamingTradeService;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.io.IOException;
 import java.math.BigDecimal;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -28,8 +26,8 @@ import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore
-public class BinanceSpotStreamWebsocketTradeTest {
+@Disabled
+class BinanceSpotStreamWebsocketTradeTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(BinanceSpotStreamWebsocketTradeTest.class);
@@ -39,8 +37,8 @@ public class BinanceSpotStreamWebsocketTradeTest {
   private static final Instrument instrument2 = new CurrencyPair("SOL/USDT");
   private final boolean logOutput = false;
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  void setUp() {
     ExchangeSpecification spec = new ExchangeSpecification(BinanceStreamingExchange.class);
     //  websocket trade not work on test net, main net only
     AuthUtils.setApiAndSecretKey(spec, "binance-main-ed25519"); // apikey and ed2519 private key
@@ -51,7 +49,7 @@ public class BinanceSpotStreamWebsocketTradeTest {
   }
 
   @Test
-  public void websocketTrade() throws InterruptedException, IOException {
+  void websocketTrade() throws Exception {
     ProductSubscription subscription =
         ProductSubscription.create()
             // workaround to connect to userDataStream
@@ -64,8 +62,6 @@ public class BinanceSpotStreamWebsocketTradeTest {
     while (!exchange.isAlive()) {
       Thread.sleep(100L);
     }
-    BinanceStreamingTradeService binanceStreamingTradeService =
-        ((BinanceStreamingTradeService) exchange.getStreamingTradeService());
     BigDecimal minAmount =
         exchange.getExchangeMetaData().getInstruments().get(instrument2).getMinimumAmount();
     Ticker ticker = exchange.getMarketDataService().getTicker(instrument2);
@@ -84,7 +80,8 @@ public class BinanceSpotStreamWebsocketTradeTest {
             .userReference(limitOrderUserId)
             .build();
     Disposable limitOrderDisposable =
-        binanceStreamingTradeService
+        exchange
+            .getStreamingTradeService()
             .placeLimitOrder(limitOrder)
             .subscribe(
                 result -> {
@@ -103,8 +100,9 @@ public class BinanceSpotStreamWebsocketTradeTest {
             .userReference(limitOrderUserId)
             .build();
     Disposable changeOrderDisposable =
-        binanceStreamingTradeService
-            .changeOrder(changeOrder, cancelOrderParams)
+        exchange
+            .getStreamingTradeService()
+            .changeOrder(changeOrder)
             .subscribe(
                 result -> {
                   if (logOutput) {
@@ -116,7 +114,8 @@ public class BinanceSpotStreamWebsocketTradeTest {
     LOG.info("changeOrder disposed: {}", changeOrderDisposable.isDisposed());
 
     Disposable cancelOrderDisposable =
-        binanceStreamingTradeService
+        exchange
+            .getStreamingTradeService()
             .cancelOrder(cancelOrderParams)
             .subscribe(
                 result -> {
@@ -134,7 +133,8 @@ public class BinanceSpotStreamWebsocketTradeTest {
             .userReference(marketOrderUserId)
             .build();
     Disposable marketOrderDisposable =
-        binanceStreamingTradeService
+        exchange
+            .getStreamingTradeService()
             .placeMarketOrder(marketOrder)
             .doOnError(error -> LOG.error("placeMarketOrder error", error))
             .subscribe(

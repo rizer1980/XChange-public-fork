@@ -5,10 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
+import org.knowm.xchange.bybit.dto.marketdata.BybitOrderbook;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentInfo.InstrumentStatus;
 import org.knowm.xchange.bybit.dto.marketdata.instruments.BybitInstrumentsInfo;
@@ -23,14 +24,13 @@ import org.knowm.xchange.bybit.dto.marketdata.tickers.BybitTickers;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.option.BybitOptionTicker;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.spot.BybitSpotTicker;
-import org.knowm.xchange.bybit.dto.marketdata.BybitOrderbook;
 
-public class BybitMarketDataServiceRawTest extends BaseWiremockTest {
+class BybitMarketDataServiceRawTest extends BaseWiremockTest {
 
   private BybitMarketDataServiceRaw marketDataServiceRaw;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  void setUp() throws Exception {
     Exchange bybitExchange = createExchange();
     marketDataServiceRaw = (BybitMarketDataServiceRaw) bybitExchange.getMarketDataService();
   }
@@ -48,7 +48,7 @@ public class BybitMarketDataServiceRawTest extends BaseWiremockTest {
   }
 
   @Test
-  public void testGetLinearInverseInstrumentsInfo() throws Exception {
+  void getLinearInverseInstrumentsInfo() throws Exception {
     initInstrumentsInfoStub("/getInstrumentLinear.json5");
 
     BybitInstrumentsInfo<BybitInstrumentInfo> instrumentsInfo =
@@ -94,7 +94,7 @@ public class BybitMarketDataServiceRawTest extends BaseWiremockTest {
   }
 
   @Test
-  public void testGetOptionInstrumentsInfo() throws Exception {
+  void getOptionInstrumentsInfo() throws Exception {
     initInstrumentsInfoStub("/getInstrumentOption.json5");
 
     BybitInstrumentsInfo<BybitInstrumentInfo> instrumentsInfo =
@@ -129,7 +129,7 @@ public class BybitMarketDataServiceRawTest extends BaseWiremockTest {
   }
 
   @Test
-  public void testGetSpotInstrumentsInfo() throws Exception {
+  void getSpotInstrumentsInfo() throws Exception {
     initInstrumentsInfoStub("/getInstrumentSpot.json5");
 
     BybitInstrumentsInfo<BybitInstrumentInfo> instrumentsInfo =
@@ -162,7 +162,7 @@ public class BybitMarketDataServiceRawTest extends BaseWiremockTest {
   }
 
   @Test
-  public void testGetLinearInverseTicker() throws Exception {
+  void getLinearInverseTicker() throws Exception {
     initTickerStub("/getTickerInverse.json5");
 
     BybitTickers<BybitTicker> bybitTickers =
@@ -200,7 +200,7 @@ public class BybitMarketDataServiceRawTest extends BaseWiremockTest {
   }
 
   @Test
-  public void testGetOptionTicker() throws Exception {
+  void getOptionTicker() throws Exception {
     initTickerStub("/getTickerOption.json5");
 
     BybitTickers<BybitTicker> bybitTickers =
@@ -238,7 +238,7 @@ public class BybitMarketDataServiceRawTest extends BaseWiremockTest {
   }
 
   @Test
-  public void testGetSpotTicker() throws Exception {
+  void getSpotTicker() throws Exception {
     initTickerStub("/getTickerSpot.json5");
 
     BybitTickers<BybitTicker> bybitTickers =
@@ -264,7 +264,7 @@ public class BybitMarketDataServiceRawTest extends BaseWiremockTest {
   }
 
   @Test
-  public void testGetSpotOrderbook() throws Exception {
+  void getSpotOrderbook() throws Exception {
     initOrderbookStub("/getOrderbookSpot.json5");
 
     BybitOrderbook orderbook =
@@ -276,9 +276,12 @@ public class BybitMarketDataServiceRawTest extends BaseWiremockTest {
     assertThat(orderbook.getCrossSequence()).isEqualTo(1432604333L);
     assertThat(orderbook.getBids()).hasSize(2);
     assertThat(orderbook.getAsks()).hasSize(2);
-    assertThat(orderbook.getBids().get(new BigDecimal("65485.47"))).isEqualTo(new BigDecimal("47.081829"));
-    assertThat(orderbook.getBids().get(new BigDecimal("65484.00"))).isEqualTo(new BigDecimal("10.0"));
-    assertThat(orderbook.getAsks().get(new BigDecimal("65557.7"))).isEqualTo(new BigDecimal("16.606555"));
+    assertThat(orderbook.getBids().get(new BigDecimal("65485.47")))
+        .isEqualTo(new BigDecimal("47.081829"));
+    assertThat(orderbook.getBids().get(new BigDecimal("65484.00")))
+        .isEqualTo(new BigDecimal("10.0"));
+    assertThat(orderbook.getAsks().get(new BigDecimal("65557.7")))
+        .isEqualTo(new BigDecimal("16.606555"));
     assertThat(orderbook.getAsks().get(new BigDecimal("65558.0"))).isEqualTo(new BigDecimal("5.0"));
   }
 }

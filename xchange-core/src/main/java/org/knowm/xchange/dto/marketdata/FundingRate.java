@@ -1,15 +1,16 @@
 package org.knowm.xchange.dto.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.Date;
-import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.knowm.xchange.instrument.Instrument;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 @Getter
 @ToString
@@ -108,8 +109,11 @@ public class FundingRate {
   public enum FundingRateInterval {
     H1(1),
     H2(2),
+    H3(3),
     H4(4),
+    H5(5),
     H6(6),
+    H7(7),
     H8(8);
     private final int hours;
 
