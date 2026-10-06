@@ -16,6 +16,7 @@ import org.knowm.xchange.bybit.dto.marketdata.candles.BybitCandleStick;
 import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.*;
+import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,14 +24,6 @@ import org.slf4j.LoggerFactory;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -38,16 +31,6 @@ import java.util.stream.Collectors;
 
 import static info.bitrich.xchangestream.bybit.BybitStreamAdapters.adaptFundingRateInterval;
 import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
-import org.knowm.xchange.bybit.dto.marketdata.tickers.linear.BybitLinearInverseTicker;
-import org.knowm.xchange.dto.Order;
-import org.knowm.xchange.dto.marketdata.FundingRate;
-import org.knowm.xchange.dto.marketdata.OrderBook;
-import org.knowm.xchange.dto.marketdata.OrderBookUpdate;
-import org.knowm.xchange.dto.marketdata.Trade;
-import org.knowm.xchange.dto.trade.LimitOrder;
-import org.knowm.xchange.instrument.Instrument;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class BybitStreamingMarketDataService implements StreamingMarketDataService {
 
@@ -82,23 +65,18 @@ public class BybitStreamingMarketDataService implements StreamingMarketDataServi
     List<Integer> depths;
     List<AtomicLong> orderBookUpdateIdPrev = new ArrayList<>();
     if (args.length > 0 && args[0] != null) {
-      depths = Arrays.stream(args[0].toString().split(","))
-          .map(String::trim) // Optional: remove leading/trailing whitespace
-          .map(Integer::parseInt)
-          .collect(Collectors.toList());
+      depths =
+          Arrays.stream(args[0].toString().split(","))
+              .map(String::trim) // Optional: remove leading/trailing whitespace
+              .map(Integer::parseInt)
+              .collect(Collectors.toList());
       // highest first, to receive snapshot
       depths.sort(Comparator.reverseOrder());
     } else {
       depths = new ArrayList<>();
       depths.add(50);
     }
-    String orderBookMapId;
-    if (depths.get(0) == 1) { // Level 1 data, processed external
-      orderBookMapId = ORDERBOOK + "1" + convertToBybitSymbol(instrument);
-    } else // other levels merged into one here
-    {
-      orderBookMapId = ORDERBOOK + convertToBybitSymbol(instrument);
-    }
+    String orderBookMapId = ORDERBOOK + convertToBybitSymbol(instrument);
     List<Observable<OrderBook>> observableList = new ArrayList<>();
     for (int i = 0; i < depths.size(); i++) {
       orderBookUpdateIdPrev.add(new AtomicLong());

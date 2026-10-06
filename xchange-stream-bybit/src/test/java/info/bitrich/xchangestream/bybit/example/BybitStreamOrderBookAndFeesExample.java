@@ -1,17 +1,8 @@
 package info.bitrich.xchangestream.bybit.example;
 
-import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectDemoApi;
-import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectMainApi;
-
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.io.IOException;
-import java.sql.SQLOutput;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.account.Fee;
@@ -21,11 +12,21 @@ import org.knowm.xchange.instrument.Instrument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static info.bitrich.xchangestream.bybit.example.BaseBybitExchange.connectMainApi;
+
+@Slf4j
 public class BybitStreamOrderBookAndFeesExample {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(BybitStreamOrderBookAndFeesExample.class);
-  static Instrument instrument = new FuturesContract("POWER/USDT/PERP");
+  static Instrument instrument = new FuturesContract("SOL/USDT/PERP");
 
   public static void main(String[] args) {
     try {
@@ -59,7 +60,7 @@ public class BybitStreamOrderBookAndFeesExample {
           break;
         }
       }
-      LOG.debug("ask {}, bid {}", sbAsks.toString(), sbBids.toString());
+      LOG.debug("ask {}, bid {}", sbAsks, sbBids);
     }
   }
   static List<Disposable> booksDisposable = new ArrayList<>();
@@ -92,7 +93,7 @@ public class BybitStreamOrderBookAndFeesExample {
 
   private static void getOrderBookExample() throws InterruptedException {
     exchange = connectMainApi(BybitCategory.LINEAR, false);
-    subscribeOrderBook("200,50");
+    subscribeOrderBook("200");
     subscribeOrderBook("1");
     Thread.sleep(120000L);
     for (Disposable dis : booksDisposable) {
@@ -115,7 +116,7 @@ public class BybitStreamOrderBookAndFeesExample {
                   }
                 })
             .subscribe(
-                orderbook -> System.out.print("."),
+                orderbook -> log.info("ask size {}, bids size {}", orderbook.getAsks().size(), orderbook.getBids().size()),
                 throwable -> {
                   LOG.error(throwable.getMessage());
                 }));
