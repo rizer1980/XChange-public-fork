@@ -5,14 +5,14 @@ import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
+import java.util.ArrayList;
+import java.util.List;
 import org.knowm.xchange.bybit.BybitExchange;
 import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 
 public class BybitStreamingExchange extends BybitExchange implements StreamingExchange {
 
@@ -86,8 +86,8 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
     apiUrl +=
         "/"
             + ((BybitCategory)
-            exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE))
-            .getValue();
+                    exchangeSpecification.getExchangeSpecificParametersItem(EXCHANGE_TYPE))
+                .getValue();
     return apiUrl;
   }
 
@@ -212,5 +212,10 @@ public class BybitStreamingExchange extends BybitExchange implements StreamingEx
       streamingUserTradeService.setRetryDuration(timeout);
     if (streamingUserDataService != null)
       streamingUserDataService.setRetryDuration(timeout);
+  }
+
+  @Override
+  public Observable<Object> connectionIdle() {
+    return streamingService.subscribeIdle();
   }
 }

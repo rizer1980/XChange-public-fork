@@ -123,6 +123,10 @@ public class OkexStreamingExchange extends OkexExchange implements StreamingExch
       privateStreamingService.pingPongDisconnectIfConnected();
       completableList.add(privateStreamingService.disconnect());
     }
+    if (businessStreamingService != null) {
+      businessStreamingService.pingPongDisconnectIfConnected();
+      completableList.add(businessStreamingService.disconnect());
+    }
     return Completable.concat(completableList);
   }
 
