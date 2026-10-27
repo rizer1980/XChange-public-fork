@@ -4,10 +4,6 @@ import info.bitrich.xchangestream.binance.dto.market.BinanceRawTrade;
 import info.bitrich.xchangestream.binance.dto.market.DepthBinanceWebSocketTransaction;
 import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketOrderAmendPayload;
 import info.bitrich.xchangestream.binance.dto.trade.BinanceWebsocketPlaceOrderPayload;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.dto.trade.OrderType;
 import org.knowm.xchange.binance.dto.trade.TimeInForce;
@@ -18,6 +14,11 @@ import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.instrument.Instrument;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 public class BinanceStreamingAdapters {
 
@@ -91,7 +92,8 @@ public class BinanceStreamingAdapters {
 
   public static BinanceWebsocketPlaceOrderPayload adaptPlaceOrder(Order order) {
     boolean reduceOnly = false;
-    if (order.getInstrument() instanceof FuturesContract) {
+    String positionSide = BinanceAdapters.getPositionSide(order);
+    if (order.getInstrument() instanceof FuturesContract && positionSide == null) {
       switch (order.getType()) {
         case EXIT_ASK:
         case EXIT_BID:
@@ -114,6 +116,7 @@ public class BinanceStreamingAdapters {
               .timestamp(System.currentTimeMillis())
               .timeInForce(tif)
               .newClientOrderId(order.getUserReference())
+              .positionSide(positionSide)
               .build();
       return payload;
     } else if (order instanceof MarketOrder) {
@@ -126,6 +129,7 @@ public class BinanceStreamingAdapters {
               .quantity(order.getOriginalAmount())
               .timestamp(System.currentTimeMillis())
               .newClientOrderId(order.getUserReference())
+              .positionSide(positionSide)
               .build();
     }
     return payload;

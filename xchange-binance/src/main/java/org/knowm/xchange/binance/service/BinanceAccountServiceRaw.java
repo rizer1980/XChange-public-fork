@@ -1,34 +1,9 @@
 package org.knowm.xchange.binance.service;
 
-import static org.knowm.xchange.binance.BinanceResilience.REQUEST_WEIGHT_RATE_LIMITER;
-import static org.knowm.xchange.client.ResilienceRegistries.NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import org.knowm.xchange.binance.BinanceAdapters;
 import org.knowm.xchange.binance.BinanceExchange;
 import org.knowm.xchange.binance.dto.BinanceException;
-import org.knowm.xchange.binance.dto.account.AssetDetail;
-import org.knowm.xchange.binance.dto.account.AssetDividendResponse;
-import org.knowm.xchange.binance.dto.account.BinanceAccountInformation;
-import org.knowm.xchange.binance.dto.account.BinanceCurrencyInfo;
-import org.knowm.xchange.binance.dto.account.BinanceDeposit;
-import org.knowm.xchange.binance.dto.account.BinanceFiatOrder;
-import org.knowm.xchange.binance.dto.account.BinanceFiatOrdersResponse;
-import org.knowm.xchange.binance.dto.account.BinanceFlexiblePositionResponse;
-import org.knowm.xchange.binance.dto.account.BinanceLockedPositionResponse;
-import org.knowm.xchange.binance.dto.account.BinanceSimpleAccount;
-import org.knowm.xchange.binance.dto.account.BinanceTradeFee;
-import org.knowm.xchange.binance.dto.account.BinanceWithdraw;
-import org.knowm.xchange.binance.dto.account.DepositAddress;
-import org.knowm.xchange.binance.dto.account.TransferHistory;
-import org.knowm.xchange.binance.dto.account.TransferSubUserHistory;
-import org.knowm.xchange.binance.dto.account.WithdrawResponse;
+import org.knowm.xchange.binance.dto.account.*;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureAccountInformation;
 import org.knowm.xchange.binance.dto.account.futures.BinanceFutureCommissionRate;
 import org.knowm.xchange.binance.dto.trade.MarginType;
@@ -37,6 +12,17 @@ import org.knowm.xchange.binance.dto.trade.futures.BinanceSetLeverage;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.instrument.Instrument;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import static org.knowm.xchange.binance.BinanceResilience.REQUEST_WEIGHT_RATE_LIMITER;
+import static org.knowm.xchange.client.ResilienceRegistries.NON_IDEMPOTENT_CALLS_RETRY_CONFIG_NAME;
 
 public class BinanceAccountServiceRaw extends BinanceBaseService {
 
@@ -338,18 +324,26 @@ public class BinanceAccountServiceRaw extends BinanceBaseService {
         .call();
   }
 
-  public BinanceChangeStatus setDualSidePosition(boolean dualSidePosition) throws IOException {
-    return decorateApiCall(
-            () ->
-                binanceFutures.setDualSidePosition(
-                    dualSidePosition,
-                    getRecvWindow(),
-                    getTimestampFactory(),
-                    apiKey,
-                    signatureCreator))
-        .withRetry(retry("setDualSidePosition"))
-        .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
-        .call();
+  public BinanceChangeStatus setDualSidePositionRaw(boolean dualSidePosition) throws IOException {
+    try {
+      return decorateApiCall(
+              () ->
+                  binanceFutures.setDualSidePosition(
+                      dualSidePosition,
+                      getRecvWindow(),
+                      getTimestampFactory(),
+                      apiKey,
+                      signatureCreator))
+          .withRetry(retry("setDualSidePosition"))
+          .withRateLimiter(rateLimiter(REQUEST_WEIGHT_RATE_LIMITER))
+          .call();
+    } catch (BinanceException e) {
+      if (e.getCode() == -4059) {
+        //{"code":-4059,"msg":"No need to change position side."}
+        return new BinanceChangeStatus(-4059, e.getMessage());
+      }
+      throw e;
+    }
   }
 
   public BinanceSetLeverage setLeverageRaw(Instrument instrument, int leverage) throws IOException {

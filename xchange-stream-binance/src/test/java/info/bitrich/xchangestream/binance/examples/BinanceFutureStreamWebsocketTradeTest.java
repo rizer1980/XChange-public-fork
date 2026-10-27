@@ -1,21 +1,18 @@
 package info.bitrich.xchangestream.binance.examples;
 
-import static info.bitrich.xchangestream.binance.examples.Util.getMinAmount;
-import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
-import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
-
 import info.bitrich.xchangestream.binancefuture.BinanceFutureStreamingExchange;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.math.BigDecimal;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
+import org.knowm.xchange.binance.dto.trade.futures.BinanceHedgeMode;
+import org.knowm.xchange.binance.service.BinanceAccountService;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.Ticker;
@@ -26,6 +23,13 @@ import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+
+import static info.bitrich.xchangestream.binance.examples.Util.getMinAmount;
+import static org.knowm.xchange.binance.BinanceExchange.EXCHANGE_TYPE;
+import static org.knowm.xchange.binance.dto.ExchangeType.FUTURES;
+
 @Disabled
 class BinanceFutureStreamWebsocketTradeTest {
 
@@ -33,7 +37,7 @@ class BinanceFutureStreamWebsocketTradeTest {
       LoggerFactory.getLogger(BinanceFutureStreamWebsocketTradeTest.class);
   private static StreamingExchange exchange;
   BinanceFutureStreamingExchange binanceFutureStreamingExchange;
-  private static final Instrument instrument = new FuturesContract("ETH/USDT/PERP");
+  private static final Instrument instrument = new FuturesContract("XRP/USDT/PERP");
   private static final Instrument instrument2 = new FuturesContract("SOL/USDT/PERP");
   private final boolean logOutput = false;
 
@@ -46,6 +50,145 @@ class BinanceFutureStreamWebsocketTradeTest {
     spec.setExchangeSpecificParametersItem(EXCHANGE_TYPE, FUTURES);
     exchange = StreamingExchangeFactory.INSTANCE.createExchange(spec);
     binanceFutureStreamingExchange = (BinanceFutureStreamingExchange) exchange;
+  }
+
+  @Test
+  public void websocketTradePositionDualMode() throws InterruptedException, IOException {
+    ProductSubscription subscription =
+        ProductSubscription.create()
+            // workaround to connect to userDataStream
+            .addUserTrades(instrument)
+            // workaround to connect to BinanceStreamingService
+            .addTicker(instrument)
+            .build();
+    exchange.connect(subscription).blockingAwait();
+    // wait for authorization
+    while (!exchange.isAlive()) {
+      Thread.sleep(100L);
+    }
+    // switch mode to two-way
+    ((BinanceAccountService) exchange.getAccountService()).setDualSidePosition(true);
+    Ticker ticker = exchange.getMarketDataService().getTicker(instrument);
+    BigDecimal minAmount =
+        exchange.getExchangeMetaData().getInstruments().get(instrument).getMinimumAmount();
+    minAmount =
+        getMinAmount(
+            new BigDecimal("5"),
+            minAmount,
+            ticker,
+            exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
+    String limitOrderAskUserId = RandomStringUtils.randomAlphanumeric(20);
+    LimitOrder limitOrderAsk =
+        new LimitOrder.Builder(OrderType.ASK, instrument)
+            .originalAmount(minAmount)
+            .limitPrice(ticker.getHigh())
+            .userReference(limitOrderAskUserId)
+            .flag(BinanceHedgeMode.TWOWAY)
+            .build();
+    Disposable limitOrderAskDisposable =
+        exchange
+            .getStreamingTradeService()
+            .placeLimitOrder(limitOrderAsk)
+            .subscribe(
+                result -> {
+                  LOG.info("limitOrderAsk is send, retCode: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable));
+    Thread.sleep(1000);
+
+    LOG.info("limitOrderBid is disposed: {}", limitOrderAskDisposable.isDisposed());
+    String limitOrderBidUserId = RandomStringUtils.randomAlphanumeric(20);
+    LimitOrder limitOrderBid =
+        new LimitOrder.Builder(OrderType.BID, instrument)
+            .originalAmount(minAmount)
+            .limitPrice(ticker.getLow())
+            .userReference(limitOrderBidUserId)
+            .flag(BinanceHedgeMode.TWOWAY)
+            .build();
+    Disposable limitOrderBidDisposable =
+        exchange
+            .getStreamingTradeService()
+            .placeLimitOrder(limitOrderBid)
+            .subscribe(
+                result -> {
+                  LOG.info("limitOrderBid is send, retCode: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable));
+    Thread.sleep(1000);
+    LOG.info("limitOrderBid is disposed: {}", limitOrderBidDisposable.isDisposed());
+    Disposable cancelLimitOrderAskDisposable =
+        exchange
+            .getStreamingTradeService()
+            .cancelOrder(new BinanceCancelOrderParams(instrument, "", limitOrderAskUserId))
+            .subscribe(
+                result -> {
+                  LOG.info("cancelLimitOrderAsk is send, retCode: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable));
+    Thread.sleep(1000);
+    LOG.info("cancelLimitOrderAsk is disposed: {}", cancelLimitOrderAskDisposable.isDisposed());
+    Disposable cancelLimitOrderBidDisposable =
+        exchange
+            .getStreamingTradeService()
+            .cancelOrder(new BinanceCancelOrderParams(instrument, "", limitOrderBidUserId))
+            .subscribe(
+                result -> {
+                  LOG.info("cancelLimitOrderBid is send, retCode: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable));
+    Thread.sleep(1000);
+    LOG.info("cancelLimitOrderBid is disposed: {}", cancelLimitOrderBidDisposable.isDisposed());
+    MarketOrder marketOrderAsk = new MarketOrder.Builder(OrderType.ASK, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
+    Disposable marketOrderAskDisposable =
+        exchange
+            .getStreamingTradeService()
+            .placeMarketOrder(marketOrderAsk)
+            .subscribe(
+                result -> {
+                  LOG.info("marketOrderAsk is send, retCode: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable));
+    Thread.sleep(1000);
+    LOG.info("marketOrderBid is disposed: {}", marketOrderAskDisposable.isDisposed());
+
+    MarketOrder marketOrderBid = new MarketOrder.Builder(OrderType.BID, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
+    Disposable marketOrderBidDisposable =
+        exchange
+            .getStreamingTradeService()
+            .placeMarketOrder(marketOrderBid)
+            .subscribe(
+                result -> {
+                  LOG.info("marketOrderBid is send, retCode: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable));
+    Thread.sleep(1000);
+    LOG.info("marketOrderBid is disposed: {}", marketOrderBidDisposable.isDisposed());
+
+    MarketOrder marketOrderCloseAsk = new MarketOrder.Builder(OrderType.EXIT_ASK, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
+    Disposable marketOrderCloseAskDisposable =
+        exchange
+            .getStreamingTradeService()
+            .placeMarketOrder(marketOrderCloseAsk)
+            .subscribe(
+                result -> {
+                  LOG.info("marketOrderCloseBid is send, retCode: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable));
+    Thread.sleep(1000);
+    LOG.info("marketOrderCloseBid is disposed: {}", marketOrderCloseAskDisposable.isDisposed());
+
+    MarketOrder marketOrderCloseBid = new MarketOrder.Builder(OrderType.EXIT_BID, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
+    Disposable marketOrderCloseBidDisposable =
+        exchange
+            .getStreamingTradeService()
+            .placeMarketOrder(marketOrderCloseBid)
+            .subscribe(
+                result -> {
+                  LOG.info("marketOrderCloseBid is send, retCode: {}", result);
+                },
+                throwable -> LOG.error("throwable", throwable));
+    Thread.sleep(1000);
+    LOG.info("marketOrderCloseBid is disposed: {}", marketOrderCloseBidDisposable.isDisposed());
   }
 
   @Test

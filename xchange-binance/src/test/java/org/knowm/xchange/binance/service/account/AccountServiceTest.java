@@ -1,33 +1,33 @@
 package org.knowm.xchange.binance.service.account;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
-
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.BinanceExchange;
+import org.knowm.xchange.binance.dto.ExchangeType;
 import org.knowm.xchange.binance.dto.account.BinanceFundingHistoryParams;
+import org.knowm.xchange.binance.dto.trade.futures.BinanceChangeStatus;
+import org.knowm.xchange.binance.service.BinanceAccountService;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.account.FundingRecord;
 import org.knowm.xchange.dto.account.FundingRecord.Status;
 import org.knowm.xchange.dto.account.FundingRecord.Type;
+import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.exceptions.ExchangeSecurityException;
 import org.knowm.xchange.service.account.AccountService;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 public class AccountServiceTest {
 
@@ -232,6 +232,84 @@ public class AccountServiceTest {
                     .withStatus(200)
                     .withHeader("Content-Type", "application/json")
                     .withBody("{\"rows\":[],\"total\":0}")));
+  }
+
+  @Test
+  @Timeout(
+      value = 2000,
+      unit = TimeUnit.MILLISECONDS,
+      threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+  void setDualSidePositionSuccess() throws Exception {
+    BinanceExchange exchange = createFuturesExchange();
+    BinanceAccountService service = (BinanceAccountService) exchange.getAccountService();
+    stubDualSidePosition("{\"code\":200,\"msg\":\"success\"}", 200);
+
+    boolean result = service.setDualSidePosition(true);
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  @Timeout(
+      value = 2000,
+      unit = TimeUnit.MILLISECONDS,
+      threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+  void setDualSidePositionNoNeedToChange() throws Exception {
+    BinanceExchange exchange = createFuturesExchange();
+    BinanceAccountService service = (BinanceAccountService) exchange.getAccountService();
+    stubDualSidePosition("{\"code\":-4059,\"msg\":\"No need to change position side.\"}", 400);
+
+    boolean result = service.setDualSidePosition(true);
+    assertThat(result).isTrue();
+
+    BinanceChangeStatus rawResult = service.setDualSidePositionRaw(true);
+    assertThat(rawResult.getCode()).isEqualTo(-4059);
+    assertThat(rawResult.getMsg()).contains("No need to change position side.");
+  }
+
+  @Test
+  @Timeout(
+      value = 2000,
+      unit = TimeUnit.MILLISECONDS,
+      threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+  void setDualSidePositionOtherError() {
+    BinanceExchange exchange = createFuturesExchange();
+    BinanceAccountService service = (BinanceAccountService) exchange.getAccountService();
+    stubDualSidePosition("{\"code\":-4050,\"msg\":\"Position side does not match.\"}", 400);
+
+    Throwable exception = catchThrowable(() -> service.setDualSidePosition(true));
+    assertThat(exception).isInstanceOf(ExchangeException.class);
+  }
+
+  private void stubDualSidePosition(String responseBody, int statusCode) {
+    stubFor(
+        post(urlPathEqualTo("/fapi/v1/positionSide/dual"))
+            .willReturn(
+                aResponse()
+                    .withStatus(statusCode)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(responseBody)));
+  }
+
+  private BinanceExchange createFuturesExchange() {
+    BinanceExchange exchange =
+        new BinanceExchange() {
+          @Override
+          protected void concludeHostParams(ExchangeSpecification exchangeSpecification) {
+            // keep wiremock url
+          }
+        };
+    ExchangeSpecification specification = exchange.getDefaultExchangeSpecification();
+    specification.setHost("localhost");
+    specification.setSslUri("http://localhost:" + wireMockRule.getPort() + "/");
+    specification.setPort(wireMockRule.getPort());
+    specification.setShouldLoadRemoteMetaData(false);
+    specification.setHttpReadTimeout(1000);
+    specification.setExchangeSpecificParametersItem(
+        BinanceExchange.EXCHANGE_TYPE, ExchangeType.FUTURES);
+    specification.setApiKey("apiKey");
+    specification.setSecretKey("secretKey");
+    exchange.applySpecification(specification);
+    return exchange;
   }
 
   private BinanceExchange createExchange() {
