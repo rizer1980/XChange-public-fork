@@ -37,7 +37,7 @@ class BinanceFutureStreamWebsocketTradeTest {
       LoggerFactory.getLogger(BinanceFutureStreamWebsocketTradeTest.class);
   private static StreamingExchange exchange;
   BinanceFutureStreamingExchange binanceFutureStreamingExchange;
-  private static final Instrument instrument = new FuturesContract("XRP/USDT/PERP");
+  private static final Instrument instrument = new FuturesContract("BULLA/USDT/PERP");
   private static final Instrument instrument2 = new FuturesContract("SOL/USDT/PERP");
   private final boolean logOutput = false;
 
@@ -77,6 +77,7 @@ class BinanceFutureStreamWebsocketTradeTest {
             minAmount,
             ticker,
             exchange.getExchangeMetaData().getInstruments().get(instrument).getVolumeScale());
+    minAmount = new BigDecimal("140");
     String limitOrderAskUserId = RandomStringUtils.randomAlphanumeric(20);
     LimitOrder limitOrderAsk =
         new LimitOrder.Builder(OrderType.ASK, instrument)
@@ -95,8 +96,7 @@ class BinanceFutureStreamWebsocketTradeTest {
                 },
                 throwable -> LOG.error("throwable", throwable));
     Thread.sleep(1000);
-
-    LOG.info("limitOrderBid is disposed: {}", limitOrderAskDisposable.isDisposed());
+    LOG.info("limitOrderAsk is disposed: {}", limitOrderAskDisposable.isDisposed());
     String limitOrderBidUserId = RandomStringUtils.randomAlphanumeric(20);
     LimitOrder limitOrderBid =
         new LimitOrder.Builder(OrderType.BID, instrument)
@@ -149,7 +149,7 @@ class BinanceFutureStreamWebsocketTradeTest {
                 },
                 throwable -> LOG.error("throwable", throwable));
     Thread.sleep(1000);
-    LOG.info("marketOrderBid is disposed: {}", marketOrderAskDisposable.isDisposed());
+    LOG.info("marketOrderAsk is disposed: {}", marketOrderAskDisposable.isDisposed());
 
     MarketOrder marketOrderBid = new MarketOrder.Builder(OrderType.BID, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
     Disposable marketOrderBidDisposable =
@@ -171,11 +171,11 @@ class BinanceFutureStreamWebsocketTradeTest {
             .placeMarketOrder(marketOrderCloseAsk)
             .subscribe(
                 result -> {
-                  LOG.info("marketOrderCloseBid is send, retCode: {}", result);
+                  LOG.info("marketOrderCloseAsk is send, retCode: {}", result);
                 },
                 throwable -> LOG.error("throwable", throwable));
     Thread.sleep(1000);
-    LOG.info("marketOrderCloseBid is disposed: {}", marketOrderCloseAskDisposable.isDisposed());
+    LOG.info("marketOrderCloseAsk is disposed: {}", marketOrderCloseAskDisposable.isDisposed());
 
     MarketOrder marketOrderCloseBid = new MarketOrder.Builder(OrderType.EXIT_BID, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
     Disposable marketOrderCloseBidDisposable =
@@ -189,6 +189,8 @@ class BinanceFutureStreamWebsocketTradeTest {
                 throwable -> LOG.error("throwable", throwable));
     Thread.sleep(1000);
     LOG.info("marketOrderCloseBid is disposed: {}", marketOrderCloseBidDisposable.isDisposed());
+    // switch mode back to one-way
+    ((BinanceAccountService) exchange.getAccountService()).setDualSidePosition(false);
   }
 
   @Test
