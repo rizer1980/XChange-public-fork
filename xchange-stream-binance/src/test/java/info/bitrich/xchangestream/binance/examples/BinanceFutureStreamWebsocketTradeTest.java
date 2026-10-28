@@ -11,13 +11,13 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.binance.dto.trade.BinanceCancelOrderParams;
-import org.knowm.xchange.binance.dto.trade.futures.BinanceHedgeMode;
 import org.knowm.xchange.binance.service.BinanceAccountService;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
+import org.knowm.xchange.dto.trade.OrderHedgeMode;
 import org.knowm.xchange.instrument.Instrument;
 import org.knowm.xchange.utils.AuthUtils;
 import org.slf4j.Logger;
@@ -84,7 +84,7 @@ class BinanceFutureStreamWebsocketTradeTest {
             .originalAmount(minAmount)
             .limitPrice(ticker.getHigh())
             .userReference(limitOrderAskUserId)
-            .flag(BinanceHedgeMode.TWOWAY)
+            .flag(OrderHedgeMode.TWOWAY)
             .build();
     Disposable limitOrderAskDisposable =
         exchange
@@ -103,7 +103,7 @@ class BinanceFutureStreamWebsocketTradeTest {
             .originalAmount(minAmount)
             .limitPrice(ticker.getLow())
             .userReference(limitOrderBidUserId)
-            .flag(BinanceHedgeMode.TWOWAY)
+            .flag(OrderHedgeMode.TWOWAY)
             .build();
     Disposable limitOrderBidDisposable =
         exchange
@@ -138,7 +138,7 @@ class BinanceFutureStreamWebsocketTradeTest {
                 throwable -> LOG.error("throwable", throwable));
     Thread.sleep(1000);
     LOG.info("cancelLimitOrderBid is disposed: {}", cancelLimitOrderBidDisposable.isDisposed());
-    MarketOrder marketOrderAsk = new MarketOrder.Builder(OrderType.ASK, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
+    MarketOrder marketOrderAsk = new MarketOrder.Builder(OrderType.ASK, instrument).originalAmount(minAmount).flag(OrderHedgeMode.TWOWAY).build();
     Disposable marketOrderAskDisposable =
         exchange
             .getStreamingTradeService()
@@ -151,7 +151,7 @@ class BinanceFutureStreamWebsocketTradeTest {
     Thread.sleep(1000);
     LOG.info("marketOrderAsk is disposed: {}", marketOrderAskDisposable.isDisposed());
 
-    MarketOrder marketOrderBid = new MarketOrder.Builder(OrderType.BID, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
+    MarketOrder marketOrderBid = new MarketOrder.Builder(OrderType.BID, instrument).originalAmount(minAmount).flag(OrderHedgeMode.TWOWAY).build();
     Disposable marketOrderBidDisposable =
         exchange
             .getStreamingTradeService()
@@ -164,7 +164,7 @@ class BinanceFutureStreamWebsocketTradeTest {
     Thread.sleep(1000);
     LOG.info("marketOrderBid is disposed: {}", marketOrderBidDisposable.isDisposed());
 
-    MarketOrder marketOrderCloseAsk = new MarketOrder.Builder(OrderType.EXIT_ASK, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
+    MarketOrder marketOrderCloseAsk = new MarketOrder.Builder(OrderType.EXIT_ASK, instrument).originalAmount(minAmount).flag(OrderHedgeMode.TWOWAY).build();
     Disposable marketOrderCloseAskDisposable =
         exchange
             .getStreamingTradeService()
@@ -177,7 +177,7 @@ class BinanceFutureStreamWebsocketTradeTest {
     Thread.sleep(1000);
     LOG.info("marketOrderCloseAsk is disposed: {}", marketOrderCloseAskDisposable.isDisposed());
 
-    MarketOrder marketOrderCloseBid = new MarketOrder.Builder(OrderType.EXIT_BID, instrument).originalAmount(minAmount).flag(BinanceHedgeMode.TWOWAY).build();
+    MarketOrder marketOrderCloseBid = new MarketOrder.Builder(OrderType.EXIT_BID, instrument).originalAmount(minAmount).flag(OrderHedgeMode.TWOWAY).build();
     Disposable marketOrderCloseBidDisposable =
         exchange
             .getStreamingTradeService()

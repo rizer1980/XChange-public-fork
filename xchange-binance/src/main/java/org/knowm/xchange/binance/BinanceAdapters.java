@@ -15,7 +15,6 @@ import org.knowm.xchange.binance.dto.trade.BinanceOrder;
 import org.knowm.xchange.binance.dto.trade.BinanceTrade;
 import org.knowm.xchange.binance.dto.trade.OrderSide;
 import org.knowm.xchange.binance.dto.trade.OrderStatus;
-import org.knowm.xchange.binance.dto.trade.futures.BinanceHedgeMode;
 import org.knowm.xchange.binance.service.BinanceTradeService.BinanceOrderFlags;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -45,8 +44,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static org.knowm.xchange.binance.dto.trade.futures.BinanceHedgeMode.TWOWAY;
 
 public class BinanceAdapters {
   private static final DateTimeFormatter DATE_TIME_FMT =
@@ -706,10 +703,10 @@ public class BinanceAdapters {
   }
 
   public static String getPositionSide(Order order) {
-    BinanceHedgeMode hedgeMode =
-        getOrderFlag(order, BinanceHedgeMode.class).orElse(BinanceHedgeMode.ONEWAY);
+    OrderHedgeMode hedgeMode =
+        getOrderFlag(order, OrderHedgeMode.class).orElse(OrderHedgeMode.ONEWAY);
     String positionSide = null;
-    if (hedgeMode.equals(TWOWAY)) {
+    if (hedgeMode.equals(OrderHedgeMode.TWOWAY)) {
       positionSide = "LONG";
       switch (order.getType()) {
         case ASK:
