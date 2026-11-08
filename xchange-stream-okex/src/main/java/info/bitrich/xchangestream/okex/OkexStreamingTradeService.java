@@ -14,6 +14,7 @@ import io.github.resilience4j.rxjava3.ratelimiter.operator.RateLimiterOperator;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.account.OpenPosition;
@@ -30,6 +31,7 @@ import org.knowm.xchange.okex.dto.trade.OkexOrderDetails;
 import org.knowm.xchange.okex.dto.trade.OkexOrderResponse;
 import org.knowm.xchange.service.trade.params.CancelOrderParams;
 
+@Slf4j
 public class OkexStreamingTradeService implements StreamingTradeService {
 
   private final OkexPrivateStreamingService privateStreamingService;

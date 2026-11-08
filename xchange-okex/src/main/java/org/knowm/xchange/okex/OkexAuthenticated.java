@@ -2,6 +2,11 @@ package org.knowm.xchange.okex;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.okex.dto.OkexException;
 import org.knowm.xchange.okex.dto.OkexResponse;
@@ -10,12 +15,6 @@ import org.knowm.xchange.okex.dto.marketdata.OkexCurrency;
 import org.knowm.xchange.okex.dto.subaccount.OkexSubAccountDetails;
 import org.knowm.xchange.okex.dto.trade.*;
 import si.mazi.rescu.ParamsDigest;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Path("/api/v5")
 @Produces(MediaType.APPLICATION_JSON)

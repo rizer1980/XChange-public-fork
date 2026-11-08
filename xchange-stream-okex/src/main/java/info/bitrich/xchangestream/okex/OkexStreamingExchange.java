@@ -8,12 +8,11 @@ import info.bitrich.xchangestream.service.netty.ConnectionStateModel.State;
 import info.bitrich.xchangestream.service.netty.WebSocketClientHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
+import java.util.ArrayList;
+import java.util.List;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.knowm.xchange.okex.OkexExchange;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class OkexStreamingExchange extends OkexExchange implements StreamingExchange {
 

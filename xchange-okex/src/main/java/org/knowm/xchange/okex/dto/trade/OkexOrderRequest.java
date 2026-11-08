@@ -3,10 +3,12 @@ package org.knowm.xchange.okex.dto.trade;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /* Author: Max Gao (gaamox@tutanota.com) Created: 09-06-2021 */
 /** <a href="https://www.okx.com/docs-v5/en/#rest-api-trade-place-order">...</a> * */
+@Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
@@ -49,4 +51,7 @@ public class OkexOrderRequest {
 
   @JsonProperty("tradeQuoteCcy")
   private String tradeQuoteCcy;
+
+  @JsonProperty("tgtCcy")
+  private String targetCurrency;
 }

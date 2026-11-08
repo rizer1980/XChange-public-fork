@@ -101,25 +101,42 @@ public class OkexAdapters {
   private static Order adaptOrderChange(
       OkexOrderDetails okexOrder, ExchangeMetaData exchangeMetaData) {
     Instrument instrument = adaptOkexInstrumentId(okexOrder.getInstrumentId());
+    boolean isSpot = instrument instanceof CurrencyPair;
     OrderType orderType = "buy".equals(okexOrder.getSide()) ? OrderType.BID : OrderType.ASK;
     Order order;
+    BigDecimal cumulativeAmount;
+    BigDecimal originalAmount;
     if (okexOrder.getOrderType().equals(OkexOrderType.market.name())) {
+      BigDecimal fee = new BigDecimal(okexOrder.getFee()).negate();
+      if (isSpot) {
+        originalAmount = new BigDecimal(okexOrder.getAmount());
+        // for buy market order fee is in quote currency
+        if (orderType.equals(OrderType.BID)) {
+          cumulativeAmount =
+              new BigDecimal(okexOrder.getAccumulatedFill())
+                  .add(new BigDecimal(okexOrder.getFee()));
+          fee = fee.multiply(new BigDecimal(okexOrder.getAverageFilledPrice()));
+        } else cumulativeAmount = new BigDecimal(okexOrder.getAccumulatedFill());
+      } else {
+        originalAmount =
+            convertContractSizeToVolume(
+                new BigDecimal(okexOrder.getAmount()),
+                instrument,
+                exchangeMetaData.getInstruments().get(instrument).getContractValue());
+        cumulativeAmount =
+            convertContractSizeToVolume(
+                new BigDecimal(okexOrder.getAccumulatedFill()),
+                instrument,
+                exchangeMetaData.getInstruments().get(instrument).getContractValue());
+      }
       order =
           new MarketOrder.Builder(orderType, instrument)
-              .originalAmount(
-                  convertContractSizeToVolume(
-                      new BigDecimal(okexOrder.getAmount()),
-                      instrument,
-                      exchangeMetaData.getInstruments().get(instrument).getContractValue()))
-              .cumulativeAmount(
-                  convertContractSizeToVolume(
-                      new BigDecimal(okexOrder.getAccumulatedFill()),
-                      instrument,
-                      exchangeMetaData.getInstruments().get(instrument).getContractValue()))
+              .originalAmount(originalAmount)
+              .cumulativeAmount(cumulativeAmount)
               .id(okexOrder.getOrderId())
               .timestamp(new Date(Long.parseLong(okexOrder.getUpdateTime())))
               .averagePrice(new BigDecimal(okexOrder.getAverageFilledPrice()))
-              .fee(new BigDecimal(okexOrder.getFee()).negate())
+              .fee(fee)
               .userReference(okexOrder.getClientOrderId())
               .orderStatus(
                   "live".equals(okexOrder.getState())
@@ -127,18 +144,25 @@ public class OkexAdapters {
                       : OrderStatus.valueOf(okexOrder.getState().toUpperCase(Locale.ENGLISH)))
               .build();
     } else {
+      if (isSpot) {
+        originalAmount = new BigDecimal(okexOrder.getAmount());
+        cumulativeAmount = new BigDecimal(okexOrder.getAccumulatedFill());
+      } else {
+        originalAmount =
+            convertContractSizeToVolume(
+                new BigDecimal(okexOrder.getAmount()),
+                instrument,
+                exchangeMetaData.getInstruments().get(instrument).getContractValue());
+        cumulativeAmount =
+            convertContractSizeToVolume(
+                new BigDecimal(okexOrder.getAccumulatedFill()),
+                instrument,
+                exchangeMetaData.getInstruments().get(instrument).getContractValue());
+      }
       order =
           new Builder(orderType, instrument)
-              .originalAmount(
-                  convertContractSizeToVolume(
-                      new BigDecimal(okexOrder.getAmount()),
-                      instrument,
-                      exchangeMetaData.getInstruments().get(instrument).getContractValue()))
-              .cumulativeAmount(
-                  convertContractSizeToVolume(
-                      new BigDecimal(okexOrder.getAccumulatedFill()),
-                      instrument,
-                      exchangeMetaData.getInstruments().get(instrument).getContractValue()))
+              .originalAmount(originalAmount)
+              .cumulativeAmount(cumulativeAmount)
               .id(okexOrder.getOrderId())
               .timestamp(new Date(Long.parseLong(okexOrder.getUpdateTime())))
               .limitPrice(
@@ -190,18 +214,20 @@ public class OkexAdapters {
 
   public static OkexOrderRequest adaptOrder(
       MarketOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
-    return OkexOrderRequest.builder()
-        .instrumentId(adaptInstrument(order.getInstrument()))
-        .instIdCode(instrumentToInstrumentIdMap.get(order.getInstrument()).toString())
-        .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
-        .side(getSide(order))
-        .posSide(getPositionSide(order))
-        .reducePosition(order.hasFlag(OkexOrderFlags.REDUCE_ONLY))
-        .clientOrderId(order.getUserReference())
-        .orderType(OkexOrderType.market.name())
-        .amount(convertVolumeToContractSize(order, exchangeMetaData))
-        .tradeQuoteCcy(order.getInstrument().getCounter().getCurrencyCode())
-        .build();
+    boolean isSpot = !(order.getInstrument() instanceof FuturesContract);
+    var builder =
+        OkexOrderRequest.builder()
+            .instrumentId(adaptInstrument(order.getInstrument()))
+            .instIdCode(instrumentToInstrumentIdMap.get(order.getInstrument()).toString())
+            .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
+            .side(getSide(order, isSpot))
+            .posSide(getPositionSide(order))
+            .reducePosition(order.hasFlag(OkexOrderFlags.REDUCE_ONLY))
+            .clientOrderId(order.getUserReference())
+            .orderType(OkexOrderType.market.name())
+            .amount(convertVolumeToContractSize(order, exchangeMetaData));
+    if (isSpot) builder.targetCurrency("base_ccy");
+    return builder.build();
   }
 
   /**
@@ -242,11 +268,12 @@ public class OkexAdapters {
 
   public static OkexOrderRequest adaptOrder(
       LimitOrder order, ExchangeMetaData exchangeMetaData, String accountLevel) {
+    boolean isSpot = !(order.getInstrument() instanceof FuturesContract);
     return OkexOrderRequest.builder()
         .instrumentId(adaptInstrument(order.getInstrument()))
         .instIdCode(instrumentToInstrumentIdMap.get(order.getInstrument()).toString())
         .tradeMode(adaptTradeMode(order.getInstrument(), accountLevel))
-        .side(getSide(order))
+        .side(getSide(order, isSpot))
         .posSide(getPositionSide(order))
         .clientOrderId(order.getUserReference())
         .reducePosition(order.hasFlag(OkexOrderFlags.REDUCE_ONLY))
@@ -259,11 +286,10 @@ public class OkexAdapters {
                     : OkexOrderType.limit.name())
         .amount(convertVolumeToContractSize(order, exchangeMetaData))
         .price(order.getLimitPrice().toPlainString())
-        .tradeQuoteCcy(order.getInstrument().getCounter().getCurrencyCode())
         .build();
   }
 
-  private static String getSide(Order order) {
+  private static String getSide(Order order, boolean isSpot) {
     String side = "";
     switch (order.getType()) {
       case BID:
@@ -274,11 +300,11 @@ public class OkexAdapters {
         break;
       case EXIT_ASK:
         side = "buy";
-        order.getOrderFlags().add(OkexOrderFlags.REDUCE_ONLY);
+        if (!isSpot) order.getOrderFlags().add(OkexOrderFlags.REDUCE_ONLY);
         break;
       case EXIT_BID:
         side = "sell";
-        order.getOrderFlags().add(OkexOrderFlags.REDUCE_ONLY);
+        if (!isSpot) order.getOrderFlags().add(OkexOrderFlags.REDUCE_ONLY);
         break;
     }
     return side;

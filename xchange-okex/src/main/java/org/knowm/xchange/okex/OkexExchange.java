@@ -17,12 +17,6 @@ import org.knowm.xchange.okex.service.OkexMarketDataServiceRaw;
 import org.knowm.xchange.okex.service.OkexTradeService;
 import si.mazi.rescu.SynchronizedValueFactory;
 
-import java.io.IOException;
-import java.util.List;
-
-import static org.knowm.xchange.okex.dto.OkexInstType.SPOT;
-import static org.knowm.xchange.okex.dto.OkexInstType.SWAP;
-
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkexExchange extends BaseExchange {
 

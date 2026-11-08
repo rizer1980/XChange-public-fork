@@ -1,5 +1,11 @@
 package org.knowm.xchange.okex.service;
 
+import static org.knowm.xchange.okex.OkexExchange.PARAM_PASSPHRASE;
+import static org.knowm.xchange.okex.OkexExchange.PARAM_SIMULATED;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.List;
 import org.knowm.xchange.client.ResilienceRegistries;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.okex.OkexAuthenticated;
@@ -9,13 +15,6 @@ import org.knowm.xchange.okex.dto.OkexResponse;
 import org.knowm.xchange.okex.dto.account.*;
 import org.knowm.xchange.okex.dto.subaccount.OkexSubAccountDetails;
 import org.knowm.xchange.utils.DateUtils;
-
-import java.io.IOException;
-import java.util.Date;
-import java.util.List;
-
-import static org.knowm.xchange.okex.OkexExchange.PARAM_PASSPHRASE;
-import static org.knowm.xchange.okex.OkexExchange.PARAM_SIMULATED;
 
 /** Author: Max Gao (gaamox@tutanota.com) Created: 08-06-2021 */
 public class OkexAccountServiceRaw extends OkexBaseService {
@@ -181,7 +180,9 @@ public class OkexAccountServiceRaw extends OkexBaseService {
       throws OkexException, IOException {
     try {
       OkexSetPositionModeRequest requestPayload =
-          OkexSetPositionModeRequest.builder().posMode(dualMode ? "long_short_mode" : "net_mode").build();
+          OkexSetPositionModeRequest.builder()
+              .posMode(dualMode ? "long_short_mode" : "net_mode")
+              .build();
       return decorateApiCall(
               () ->
                   okexAuthenticated.setPositionMode(
