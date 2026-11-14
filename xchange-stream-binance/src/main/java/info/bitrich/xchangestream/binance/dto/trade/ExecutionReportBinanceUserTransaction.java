@@ -111,30 +111,41 @@ public class ExecutionReportBinanceUserTransaction extends ProductBinanceWebSock
         .id(Long.toString(tradeId))
         .orderId(Long.toString(orderId))
         .feeAmount(commissionAmount)
-        .feeCurrency(Currency.getInstance(commissionAsset))
+        .feeCurrency(
+            commissionAsset != null && !commissionAsset.isEmpty()
+                ? Currency.getInstance(commissionAsset)
+                : null)
         .build();
   }
 
   public Order toOrder(boolean isFuture) {
-    return BinanceAdapters.adaptOrder(
-        new BinanceOrder(
-            getSymbol(),
-            orderId,
-            clientOrderId,
-            lastExecutedPrice,
-            orderQuantity,
-            cumulativeFilledQuantity,
-            // not sure 100%, but according SPOT documentation api
-            // https://developers.binance.com/docs/binance-spot-api-docs/user-data-stream#order-update
-            cumulativeQuoteAssetTransactedQuantity,
-            currentOrderStatus,
-            timeInForce,
-            orderType,
-            side,
-            stopPrice,
-            BigDecimal.ZERO,
-            timestamp),
-        isFuture);
+    Order order =
+        BinanceAdapters.adaptOrder(
+            new BinanceOrder(
+                getSymbol(),
+                orderId,
+                clientOrderId,
+                lastExecutedPrice,
+                orderQuantity,
+                cumulativeFilledQuantity,
+                // not sure 100%, but according SPOT documentation api
+                // https://developers.binance.com/docs/binance-spot-api-docs/user-data-stream#order-update
+                cumulativeQuoteAssetTransactedQuantity,
+                currentOrderStatus,
+                timeInForce,
+                orderType,
+                side,
+                stopPrice,
+                BigDecimal.ZERO,
+                timestamp),
+            isFuture);
+    if (commissionAmount != null) {
+      order.setFee(commissionAmount);
+    }
+    if (commissionAsset != null && !commissionAsset.isEmpty()) {
+      order.setFeeCurrency(Currency.getInstance(commissionAsset));
+    }
+    return order;
   }
 
   @Override

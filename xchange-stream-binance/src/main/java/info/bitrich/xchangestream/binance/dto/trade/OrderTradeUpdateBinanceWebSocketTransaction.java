@@ -11,6 +11,7 @@ import org.knowm.xchange.binance.dto.trade.OrderSide;
 import org.knowm.xchange.binance.dto.trade.OrderStatus;
 import org.knowm.xchange.binance.dto.trade.OrderType;
 import org.knowm.xchange.binance.dto.trade.TimeInForce;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.dto.Order;
 
 @Getter
@@ -140,21 +141,29 @@ public class OrderTradeUpdateBinanceWebSocketTransaction extends BaseBinanceWebS
     }
 
     public Order toOrder(boolean isFuture) {
-      return BinanceAdapters.adaptOrder(
-          new BinanceOrder(
-              getSymbol(),
-              orderId,
-              clientOrderId,
-              lastFilledPrice.compareTo(BigDecimal.ZERO) == 0 ? originalPrice : lastFilledPrice,
-              originalQuantity,
-              filledAccumulatedQuantity,
-              averagePrice,
-              orderStatus,
-              timeInForce,
-              orderType,
-              side,
-              tradeTime),
-          isFuture);
+      Order order =
+          BinanceAdapters.adaptOrder(
+              new BinanceOrder(
+                  getSymbol(),
+                  orderId,
+                  clientOrderId,
+                  lastFilledPrice.compareTo(BigDecimal.ZERO) == 0 ? originalPrice : lastFilledPrice,
+                  originalQuantity,
+                  filledAccumulatedQuantity,
+                  averagePrice,
+                  orderStatus,
+                  timeInForce,
+                  orderType,
+                  side,
+                  tradeTime),
+              isFuture);
+      if (commission != null && !commission.isEmpty()) {
+        order.setFee(new BigDecimal(commission));
+      }
+      if (commissionAsset != null && !commissionAsset.isEmpty()) {
+        order.setFeeCurrency(Currency.getInstance(commissionAsset));
+      }
+      return order;
     }
   }
 }

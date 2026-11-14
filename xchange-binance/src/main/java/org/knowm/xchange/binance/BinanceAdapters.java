@@ -429,7 +429,10 @@ public class BinanceAdapters {
                         .id(Long.toString(t.id))
                         .orderId(Long.toString(t.orderId))
                         .feeAmount(t.commission)
-                        .feeCurrency(Currency.getInstance(t.commissionAsset))
+                        .feeCurrency(
+                            t.commissionAsset != null && !t.commissionAsset.isEmpty()
+                                ? Currency.getInstance(t.commissionAsset)
+                                : null)
                         .build())
             .collect(Collectors.toList());
     long lastId = binanceTrades.stream().map(t -> t.id).max(Long::compareTo).orElse(0L);
