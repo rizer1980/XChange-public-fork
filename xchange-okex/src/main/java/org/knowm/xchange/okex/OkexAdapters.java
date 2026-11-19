@@ -67,7 +67,7 @@ public class OkexAdapters {
                       Date.from(
                           Instant.ofEpochMilli(Long.parseLong(okexOrderDetails.getUpdateTime()))))
                   .feeAmount(new BigDecimal(okexOrderDetails.getFee()))
-                  .feeCurrency(new Currency(okexOrderDetails.getFeeCurrency()))
+                  .feeCurrency(adaptFeeCurrency(okexOrderDetails.getFeeCurrency()))
                   .orderUserReference(okexOrderDetails.getClientOrderId())
                   .build());
         });
@@ -77,25 +77,33 @@ public class OkexAdapters {
 
   public static LimitOrder adaptOrder(OkexOrderDetails order, ExchangeMetaData exchangeMetaData) {
     Instrument instrument = adaptOkexInstrumentId(order.getInstrumentId());
-    return new LimitOrder(
-        "buy".equals(order.getSide()) ? OrderType.BID : OrderType.ASK,
-        convertContractSizeToVolume(
-            new BigDecimal(order.getAmount()),
-            instrument,
-            exchangeMetaData.getInstruments().get(instrument).getContractValue()),
-        instrument,
-        order.getOrderId(),
-        new Date(Long.parseLong(order.getCreationTime())),
-        new BigDecimal(order.getPrice()),
-        order.getAverageFilledPrice().isEmpty()
-            ? BigDecimal.ZERO
-            : new BigDecimal(order.getAverageFilledPrice()),
-        new BigDecimal(order.getAccumulatedFill()),
-        new BigDecimal(order.getFee()),
-        "live".equals(order.getState())
-            ? OrderStatus.OPEN
-            : OrderStatus.valueOf(order.getState().toUpperCase(Locale.ENGLISH)),
-        order.getClientOrderId());
+    return new LimitOrder.Builder(
+            "buy".equals(order.getSide()) ? OrderType.BID : OrderType.ASK, instrument)
+        .originalAmount(
+            convertContractSizeToVolume(
+                new BigDecimal(order.getAmount()),
+                instrument,
+                exchangeMetaData.getInstruments().get(instrument).getContractValue()))
+        .id(order.getOrderId())
+        .timestamp(new Date(Long.parseLong(order.getCreationTime())))
+        .limitPrice(new BigDecimal(order.getPrice()))
+        .averagePrice(
+            order.getAverageFilledPrice().isEmpty()
+                ? BigDecimal.ZERO
+                : new BigDecimal(order.getAverageFilledPrice()))
+        .cumulativeAmount(new BigDecimal(order.getAccumulatedFill()))
+        .fee(new BigDecimal(order.getFee()))
+        .feeCurrency(adaptFeeCurrency(order.getFeeCurrency()))
+        .orderStatus(
+            "live".equals(order.getState())
+                ? OrderStatus.OPEN
+                : OrderStatus.valueOf(order.getState().toUpperCase(Locale.ENGLISH)))
+        .userReference(order.getClientOrderId())
+        .build();
+  }
+
+  private static Currency adaptFeeCurrency(String feeCurrency) {
+    return StringUtils.isEmpty(feeCurrency) ? null : new Currency(feeCurrency);
   }
 
   private static Order adaptOrderChange(
@@ -137,6 +145,7 @@ public class OkexAdapters {
               .timestamp(new Date(Long.parseLong(okexOrder.getUpdateTime())))
               .averagePrice(new BigDecimal(okexOrder.getAverageFilledPrice()))
               .fee(fee)
+              .feeCurrency(adaptFeeCurrency(okexOrder.getFeeCurrency()))
               .userReference(okexOrder.getClientOrderId())
               .orderStatus(
                   "live".equals(okexOrder.getState())
@@ -172,6 +181,7 @@ public class OkexAdapters {
                       : new BigDecimal(okexOrder.getLastFilledPrice()))
               .averagePrice(new BigDecimal(okexOrder.getAverageFilledPrice()))
               .fee(new BigDecimal(okexOrder.getFee()).negate())
+              .feeCurrency(adaptFeeCurrency(okexOrder.getFeeCurrency()))
               .userReference(okexOrder.getClientOrderId())
               .orderStatus(
                   "live".equals(okexOrder.getState())

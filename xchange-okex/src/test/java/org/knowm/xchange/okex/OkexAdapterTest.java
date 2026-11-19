@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.derivative.FuturesContract;
 import org.knowm.xchange.dto.Order;
@@ -164,6 +165,7 @@ class OkexAdapterTest {
     assertThat(adapted.getAveragePrice()).isEqualByComparingTo(new BigDecimal("49900.25"));
     assertThat(adapted.getCumulativeAmount()).isEqualByComparingTo(new BigDecimal("0.5"));
     assertThat(adapted.getFee()).isEqualByComparingTo(new BigDecimal("-0.001"));
+    assertThat(adapted.getFeeCurrency()).isEqualTo(new Currency("USDT"));
     assertThat(adapted.getStatus()).isEqualTo(OrderStatus.OPEN);
     assertThat(adapted.getTimestamp()).isEqualTo(new Date(1623321600000L));
   }
@@ -194,6 +196,7 @@ class OkexAdapterTest {
     assertThat(filledOrder.getType()).isEqualTo(OrderType.ASK);
     assertThat(filledOrder.getAveragePrice()).isEqualTo(BigDecimal.ZERO);
     assertThat(filledOrder.getStatus()).isEqualTo(OrderStatus.FILLED);
+    assertThat(filledOrder.getFeeCurrency()).isNull();
 
     String jsonCanceled = jsonFilled.replace("\"state\": \"filled\"", "\"state\": \"canceled\"");
     OkexOrderDetails canceledDetails = mapper.readValue(jsonCanceled, OkexOrderDetails.class);
@@ -463,6 +466,7 @@ class OkexAdapterTest {
             + "  \"avgPx\": \"3000\",\n"
             + "  \"state\": \"live\",\n"
             + "  \"fee\": \"-0.001\",\n"
+            + "  \"feeCcy\": \"USDT\",\n"
             + "  \"cTime\": \"1623321650000\"\n"
             + "}";
 
@@ -475,8 +479,10 @@ class OkexAdapterTest {
     assertThat(openOrders.getOpenOrders()).hasSize(2);
     assertThat(openOrders.getOpenOrders().get(0).getId()).isEqualTo("1000001");
     assertThat(openOrders.getOpenOrders().get(0).getType()).isEqualTo(OrderType.BID);
+    assertThat(openOrders.getOpenOrders().get(0).getFeeCurrency()).isNull();
     assertThat(openOrders.getOpenOrders().get(1).getId()).isEqualTo("1000002");
     assertThat(openOrders.getOpenOrders().get(1).getType()).isEqualTo(OrderType.ASK);
+    assertThat(openOrders.getOpenOrders().get(1).getFeeCurrency()).isEqualTo(new Currency("USDT"));
   }
 
   @Test
@@ -515,6 +521,7 @@ class OkexAdapterTest {
             + "  \"avgPx\": \"50000\",\n"
             + "  \"state\": \"filled\",\n"
             + "  \"fee\": \"-0.0015\",\n"
+            + "  \"feeCcy\": \"USDT\",\n"
             + "  \"uTime\": \"1623321900000\"\n"
             + "}";
 
@@ -533,6 +540,7 @@ class OkexAdapterTest {
             + "  \"avgPx\": \"50950\",\n"
             + "  \"state\": \"partially_filled\",\n"
             + "  \"fee\": \"-0.005\",\n"
+            + "  \"feeCcy\": \"USDT\",\n"
             + "  \"uTime\": \"1623321950000\"\n"
             + "}";
 
@@ -555,6 +563,7 @@ class OkexAdapterTest {
     assertThat(order1.getCumulativeAmount()).isEqualByComparingTo(new BigDecimal("1.4985"));
     assertThat(order1.getAveragePrice()).isEqualByComparingTo(new BigDecimal("50000"));
     assertThat(order1.getFee()).isEqualByComparingTo(new BigDecimal("75"));
+    assertThat(order1.getFeeCurrency()).isEqualTo(new Currency("USDT"));
     assertThat(order1.getStatus()).isEqualTo(OrderStatus.FILLED);
     assertThat(order1.getTimestamp()).isEqualTo(new Date(1623321900000L));
 
@@ -572,6 +581,7 @@ class OkexAdapterTest {
     assertThat(limitOrder2.getLimitPrice()).isEqualByComparingTo(new BigDecimal("50950"));
     assertThat(limitOrder2.getAveragePrice()).isEqualByComparingTo(new BigDecimal("50950"));
     assertThat(limitOrder2.getFee()).isEqualByComparingTo(new BigDecimal("0.005"));
+    assertThat(limitOrder2.getFeeCurrency()).isEqualTo(new Currency("USDT"));
     assertThat(limitOrder2.getStatus()).isEqualTo(OrderStatus.PARTIALLY_FILLED);
     assertThat(limitOrder2.getTimestamp()).isEqualTo(new Date(1623321950000L));
   }
