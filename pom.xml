@@ -140,7 +140,7 @@
 
         <skipIntegrationTests>true</skipIntegrationTests>
         <version.assertj>3.27.7</version.assertj>
-        <version.bouncycastle>1.86</version.bouncycastle>
+        <version.bouncycastle>1.87</version.bouncycastle>
         <version.central-publishing-maven-plugin>0.12.0</version.central-publishing-maven-plugin>
         <version.commons.lang3>3.22.0</version.commons.lang3>
         <version.fasterxml>2.23.0</version.fasterxml>
@@ -168,9 +168,9 @@
         <version.maven-source-plugin>3.4.0</version.maven-source-plugin>
         <version.maven-surefire-plugin>3.6.1</version.maven-surefire-plugin>
         <version.mockito>5.24.0</version.mockito>
-        <version.netty>4.2.20.Final</version.netty>
+        <version.netty>4.2.21.Final</version.netty>
         <version.nimbus-jose-jwt>10.10</version.nimbus-jose-jwt>
-        <version.qos.logback>1.6.6</version.qos.logback>
+        <version.qos.logback>1.6.7</version.qos.logback>
         <version.resilience4j>2.4.0</version.resilience4j>
         <version.rxjava>3.1.12</version.rxjava>
         <version.slf4j>2.0.20</version.slf4j>
